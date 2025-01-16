@@ -1,0 +1,40 @@
+{
+    "name": "wink/model-generator",
+    "description": "Laravel model generator supporting MySQL and SQLite",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Josh Wingerd",
+            "email": "github@wingerd.dev"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^10.0",
+        "illuminate/console": "^10.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0",
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Wink\\ModelGenerator\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Wink\\ModelGenerator\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Wink\\ModelGenerator\\ModelGeneratorServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
