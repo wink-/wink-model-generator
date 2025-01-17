@@ -5,17 +5,17 @@ namespace Wink\ModelGenerator\Tests;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Wink\ModelGenerator\ModelGeneratorServiceProvider;
 
-abstract class TestCase extends Orchestra
+class TestCase extends Orchestra
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+    }
+
     protected function getPackageProviders($app)
     {
         return [
             ModelGeneratorServiceProvider::class,
         ];
     }
-
-    protected function defineDatabaseMigrations()
-    {
-        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
-    }
-}
+} 

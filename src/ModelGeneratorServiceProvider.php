@@ -1,10 +1,8 @@
-
 <?php
-
 namespace Wink\ModelGenerator;
 
 use Illuminate\Support\ServiceProvider;
-use App\Console\Commands\GenerateModels;
+use Wink\ModelGenerator\Commands\GenerateModels;
 
 class ModelGeneratorServiceProvider extends ServiceProvider
 {

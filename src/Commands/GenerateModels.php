@@ -1,5 +1,4 @@
 <?php
-
 namespace Wink\ModelGenerator\Commands;
 
 use Illuminate\Console\Command;

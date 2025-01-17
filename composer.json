@@ -15,7 +15,7 @@
         "illuminate/console": "^10.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^8.0",
+        "orchestra/testbench": "^8.31",
         "phpunit/phpunit": "^10.0"
     },
     "autoload": {
@@ -36,5 +36,9 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+    }
 }
