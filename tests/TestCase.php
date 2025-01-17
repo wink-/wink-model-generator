@@ -18,4 +18,15 @@ abstract class TestCase extends Orchestra
     {
         $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
     }
+
+    protected function getEnvironmentSetUp($app)
+    {
+        // Set up default database to use sqlite :memory:
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
+    }
 }

@@ -1,10 +1,10 @@
-
 <?php
 
 namespace Wink\ModelGenerator;
 
 use Illuminate\Support\ServiceProvider;
-use App\Console\Commands\GenerateModels;
+use Wink\ModelGenerator\Commands\GenerateModels;
+use Wink\ModelGenerator\Commands\GenerateControllers;
 
 class ModelGeneratorServiceProvider extends ServiceProvider
 {
@@ -17,6 +17,7 @@ class ModelGeneratorServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 GenerateModels::class,
+                GenerateControllers::class,
             ]);
         }
     }

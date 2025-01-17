@@ -16,11 +16,14 @@
     },
     "require-dev": {
         "orchestra/testbench": "^8.0",
-        "phpunit/phpunit": "^10.0"
+        "phpunit/phpunit": "^10.0",
+        "pestphp/pest": "^2.36",
+        "pestphp/pest-plugin": "^2.1"
     },
     "autoload": {
         "psr-4": {
-            "Wink\\ModelGenerator\\": "src/"
+            "Wink\\ModelGenerator\\": "src/",
+            "Wink\\ModelGenerator\\Tests\\": "tests/"
         }
     },
     "autoload-dev": {
@@ -36,5 +39,10 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
 }
