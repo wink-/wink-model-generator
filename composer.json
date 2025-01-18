@@ -1,5 +1,5 @@
 {
-    "name": "wink/model-generator",
+    "name": "wink/wink-model-generator",
     "description": "A powerful Laravel package that automatically generates Eloquent models from your existing database schema, supporting both MySQL and SQLite databases",
     "keywords": [
         "laravel",
