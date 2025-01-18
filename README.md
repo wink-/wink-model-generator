@@ -21,7 +21,7 @@ A powerful Laravel package that automatically generates Eloquent models from you
 ## Installation
 
 ```bash
-composer require wink/model-generator
+composer require wink/wink-model-generator
 ```
 
 The package will automatically register its service provider.
