@@ -15,7 +15,7 @@ class GenerateModels extends Command
      */
     protected $signature = 'app:generate-models 
                           {--connection=sqlite : Database connection to use}
-                          {--directory= : Subdirectory for generated models}
+                          {--directory= : Full path where models should be generated}
                           {--with-relationships : Generate relationship methods}
                           {--with-factories : Generate model factories}
                           {--with-rules : Generate validation rules}';
@@ -51,11 +51,10 @@ class GenerateModels extends Command
             $connection = $this->option('connection');
             $directory = $this->option('directory');
             
-            // Create base directory for generated models
-            $baseDir = app_path('Models/GeneratedModels');
-            if ($directory) {
-                $baseDir .= '/' . ltrim($directory, '/');
-            }
+            // Use the provided directory path directly instead of appending to app_path
+            $baseDir = $directory ?: app_path('Models/GeneratedModels');
+            
+            $this->info('Generating models...');
             
             if (!File::isDirectory($baseDir)) {
                 File::makeDirectory($baseDir, 0755, true);
@@ -63,7 +62,8 @@ class GenerateModels extends Command
 
             $databaseName = config("database.connections.{$connection}.database");
 
-            if (!file_exists($databaseName)) {
+            // For SQLite in-memory database, skip the file check
+            if ($databaseName !== ':memory:' && !file_exists($databaseName)) {
                 $this->error("Database file {$databaseName} not found.");
                 return 1;
             }

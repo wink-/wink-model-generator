@@ -9,7 +9,7 @@ A powerful Laravel package that automatically generates Eloquent models from you
 
 ## Features
 
-- Supports both MySQL and SQLite databases
+- Supports both MySQL and SQLite databases (including in-memory SQLite for testing)
 - Generates complete model files with proper namespacing
 - Auto-detects relationships from foreign keys
 - Configurable model generation options
@@ -42,14 +42,14 @@ Basic usage:
 php artisan app:generate-models
 ```
 
-With options:
+### Command Options
 
 ```bash
-# Specify database connection
+# Specify database connection (default: sqlite)
 php artisan app:generate-models --connection=mysql
 
-# Generate models in a subdirectory
-php artisan app:generate-models --directory=Admin
+# Generate models in a specific directory
+php artisan app:generate-models --directory=/path/to/models
 
 # Include relationships
 php artisan app:generate-models --with-relationships
@@ -61,7 +61,27 @@ php artisan app:generate-models --with-factories
 php artisan app:generate-models --with-rules
 
 # Combine options
-php artisan app:generate-models --connection=mysql --with-relationships --with-rules
+php artisan app:generate-models --connection=mysql --directory=app/Models/Generated --with-relationships
+```
+
+### Directory Option
+
+The `--directory` option accepts either:
+- A full path (e.g., `/path/to/models`)
+- A relative path from the project root (e.g., `app/Models/Generated`)
+
+If no directory is specified, models will be generated in `app/Models/GeneratedModels`.
+
+Examples:
+```bash
+# Using absolute path
+php artisan app:generate-models --directory=/var/www/html/app/Models/Custom
+
+# Using relative path
+php artisan app:generate-models --directory=app/Models/Admin
+
+# Using path with spaces (quote the path)
+php artisan app:generate-models --directory="app/Models/Generated Models"
 ```
 
 ## Generated Model Features
@@ -86,27 +106,44 @@ Example generated model:
 /**
  * User Model
  *
+ * @property int $id
  * @property string $name
  * @property string $email
  * @property string|\DateTime $email_verified_at
+ * @property \DateTime $created_at
+ * @property \DateTime $updated_at
  */
 class User extends Model
 {
     protected $connection = 'mysql';
     protected $table = 'users';
-    protected $fillable = ['name', 'email', 'password'];
-    // ...other model properties
+    
+    protected $fillable = [
+        'name',
+        'email',
+        'password'
+    ];
+    
+    protected $casts = [
+        'email_verified_at' => 'datetime'
+    ];
+    
+    public static $rules = [
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'string', 'email', 'max:255', 'unique:users']
+    ];
 }
 ```
 
-## Configuration Options
+## Testing
 
-Edit `config/model-generator.php` to customize:
+The package includes comprehensive tests. To run them:
 
-- Default database connection
-- Excluded tables
-- Default paths
-- Naming conventions
+```bash
+composer test
+```
+
+For SQLite testing, the package supports in-memory databases, making it easy to test your model generation without setting up a separate database.
 
 ## Requirements
 

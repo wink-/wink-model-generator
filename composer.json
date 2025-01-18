@@ -1,18 +1,31 @@
 {
     "name": "wink/model-generator",
-    "description": "Laravel model generator supporting MySQL and SQLite",
+    "description": "A powerful Laravel package that automatically generates Eloquent models from your existing database schema, supporting both MySQL and SQLite databases",
+    "keywords": [
+        "laravel",
+        "model",
+        "generator",
+        "eloquent",
+        "mysql",
+        "sqlite",
+        "database",
+        "schema"
+    ],
     "type": "library",
     "license": "MIT",
     "authors": [
         {
-            "name": "Josh Wingerd",
-            "email": "github@wingerd.dev"
+            "name": "Wink",
+            "email": "winkky@gmail.com",
+            "homepage": "https://github.com/wink-",
+            "role": "Bad Developer"
         }
     ],
     "require": {
         "php": "^8.1",
         "illuminate/support": "^10.0",
-        "illuminate/console": "^10.0"
+        "illuminate/console": "^10.0",
+        "illuminate/database": "^10.0"
     },
     "require-dev": {
         "orchestra/testbench": "^8.31",
@@ -35,10 +48,23 @@
             ]
         }
     },
+    "config": {
+        "sort-packages": true
+    },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "scripts": {
         "test": "vendor/bin/phpunit",
         "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
-    }
+    },
+    "support": {
+        "issues": "https://github.com/wink-/wink-model-generator/issues",
+        "source": "https://github.com/wink-/wink-model-generator"
+    },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/wink-"
+        }
+    ]
 }
