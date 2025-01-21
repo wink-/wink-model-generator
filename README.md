@@ -2,8 +2,8 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wink/wink-model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
 [![Tests](https://github.com/wink-/wink-model-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/wink-/wink-model-generator/actions/workflows/tests.yml)
-[![Total Downloads](https://img.shields.io/packagist/dt/wink/model-generator.svg)](https://packagist.org/packages/wink/model-generator)
-[![License](https://img.shields.io/packagist/l/wink/model-generator.svg)](https://packagist.org/packages/wink/model-generator)
+[![Total Downloads](https://img.shields.io/packagist/dt/wink/model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
+[![License](https://img.shields.io/packagist/l/wink/model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
 
 A powerful Laravel package that automatically generates Eloquent models from your existing database schema, supporting both MySQL and SQLite databases.
 
