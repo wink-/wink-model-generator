@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.2.1] - 2025-01-22
+
+### Changed
+- Updated GitHub Actions workflow to only test Laravel 11
+- Removed Laravel 10 from CI test matrix
+- Updated CI PHP versions to 8.2 and 8.3 only
+
 ## [v0.2.0] - 2025-01-22
 
 ### Added
