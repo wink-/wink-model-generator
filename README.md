@@ -17,6 +17,7 @@ A powerful Laravel package that automatically generates Eloquent models from you
 - Includes validation rules based on schema
 - Handles custom database connections
 - Optional model factory generation
+- Connection-based directory structure for multi-database projects
 
 ## Installation
 
@@ -53,6 +54,9 @@ php artisan wink:generate-models --connection=mysql
 # Generate models in a specific directory
 php artisan wink:generate-models --directory=/path/to/models
 
+# Generate factories in a specific directory
+php artisan wink:generate-models --factory-directory=/path/to/factories
+
 # Include relationships
 php artisan wink:generate-models --with-relationships
 
@@ -63,27 +67,60 @@ php artisan wink:generate-models --with-factories
 php artisan wink:generate-models --with-rules
 
 # Combine options
-php artisan wink:generate-models --connection=mysql --directory=app/Models/Generated --with-relationships
+php artisan wink:generate-models --connection=mysql --directory=app/Models/Custom --with-relationships
 ```
 
-### Directory Option
+### Directory Structure
 
-The `--directory` option accepts either:
+By default, the package organizes generated files by connection name to prevent conflicts in multi-database projects:
+
+```
+app/
+├── Models/
+│   └── GeneratedModels/
+│       ├── mysql/           # Models for MySQL connection
+│       │   ├── User.php
+│       │   └── Post.php
+│       └── sqlite/          # Models for SQLite connection
+│           ├── User.php
+│           └── Comment.php
+└── database/
+    └── factories/
+        └── GeneratedFactories/
+            ├── mysql/       # Factories for MySQL connection
+            │   ├── UserFactory.php
+            │   └── PostFactory.php
+            └── sqlite/      # Factories for SQLite connection
+                ├── UserFactory.php
+                └── CommentFactory.php
+```
+
+### Directory Options
+
+The `--directory` and `--factory-directory` options accept either:
 - A full path (e.g., `/path/to/models`)
 - A relative path from the project root (e.g., `app/Models/Generated`)
 
-If no directory is specified, models will be generated in `app/Models/GeneratedModels`.
+If no directories are specified:
+- Models will be generated in `app/Models/GeneratedModels/{connection}`
+- Factories will be generated in `database/factories/GeneratedFactories/{connection}`
 
 Examples:
 ```bash
-# Using absolute path
-php artisan wink:generate-models --directory=/var/www/html/app/Models/Custom
+# Using absolute paths
+php artisan wink:generate-models --directory=/var/www/html/app/Models/Custom --factory-directory=/var/www/html/database/factories/Custom
 
-# Using relative path
-php artisan wink:generate-models --directory=app/Models/Admin
+# Using relative paths
+php artisan wink:generate-models --directory=app/Models/Admin --factory-directory=database/factories/Admin
 
-# Using path with spaces (quote the path)
-php artisan wink:generate-models --directory="app/Models/Generated Models"
+# Using paths with spaces (quote the paths)
+php artisan wink:generate-models --directory="app/Models/Generated Models" --factory-directory="database/factories/Generated Factories"
+
+# Using default connection-based directories
+php artisan wink:generate-models --connection=mysql --with-factories
+# Will generate:
+# - Models in app/Models/GeneratedModels/mysql
+# - Factories in database/factories/GeneratedFactories/mysql
 ```
 
 ## Generated Model Features
@@ -135,7 +172,6 @@ class User extends Model
         'email' => ['required', 'string', 'email', 'max:255', 'unique:users']
     ];
 }
-```
 
 ## Testing
 
