@@ -250,15 +250,96 @@ EOT;
 
     private function generateFactories(string $baseDir, array $tables, string $connection): void
     {
-        $factoryDir = database_path('factories/Generated');
+        // Change the factory directory path
+        $factoryDir = database_path('factories/GeneratedFactories');
         if (!File::isDirectory($factoryDir)) {
             File::makeDirectory($factoryDir, 0755, true);
         }
 
         foreach ($tables as $table) {
-            // Generate factory class for each model
-            // Implementation details here
+            $tableName = $table->name;
+            $modelName = Str::studly(Str::singular($tableName));
+            
+            // Get columns for factory definitions
+            $columns = $this->getTableColumns($connection, $tableName);
+            
+            $definitions = [];
+            foreach ($columns as $column) {
+                if ($column->name === 'id' || $column->name === 'created_at' || $column->name === 'updated_at') {
+                    continue;
+                }
+                
+                $faker = $this->getFakerMethod($column);
+                $definitions[] = "            '{$column->name}' => fake()->{$faker}";
+            }
+            
+            $definitionsString = implode(",\n", $definitions);
+            
+            $factoryContent = <<<EOT
+<?php
+
+namespace Database\Factories\GeneratedFactories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\GeneratedModels\\{$modelName};
+
+class {$modelName}Factory extends Factory
+{
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected \$model = {$modelName}::class;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+{$definitionsString}
+        ];
+    }
+}
+EOT;
+
+            $factoryPath = $factoryDir . "/{$modelName}Factory.php";
+            File::put($factoryPath, $factoryContent);
+            $this->info("Factory {$modelName}Factory created at {$factoryPath}");
         }
+    }
+
+    private function getFakerMethod($column): string
+    {
+        $name = strtolower($column->name);
+        $type = strtolower($column->type);
+
+        // Common column name patterns
+        if (str_contains($name, 'email')) return 'safeEmail()';
+        if (str_contains($name, 'name')) return 'name()';
+        if (str_contains($name, 'phone')) return 'phoneNumber()';
+        if (str_contains($name, 'address')) return 'address()';
+        if (str_contains($name, 'city')) return 'city()';
+        if (str_contains($name, 'country')) return 'country()';
+        if (str_contains($name, 'zip')) return 'postcode()';
+        if (str_contains($name, 'password')) return 'password()';
+        if (str_contains($name, 'url')) return 'url()';
+        if (str_contains($name, 'description')) return 'text()';
+        if (str_contains($name, 'title')) return 'sentence()';
+
+        // Data types
+        return match($type) {
+            'int', 'integer', 'bigint', 'smallint', 'tinyint' => 'randomNumber()',
+            'decimal', 'float', 'double' => 'randomFloat()',
+            'boolean', 'bool' => 'boolean()',
+            'date' => 'date()',
+            'datetime', 'timestamp' => 'dateTime()',
+            'json', 'array' => 'words(3, true)',
+            default => 'text()'
+        };
     }
 
     private function generateModelContent(

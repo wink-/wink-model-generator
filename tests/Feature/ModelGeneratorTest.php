@@ -50,6 +50,28 @@ class ModelGeneratorTest extends TestCase
         $this->assertStringContainsString('protected $connection = \'testing\'', $content);
     }
 
+    #[Test]
+    public function it_can_generate_model_factory()
+    {
+        $this->assertTrue(Schema::hasTable('users'), 'Users table does not exist');
+
+        $this->artisan('wink:generate-models', [
+            '--connection' => 'testing',
+            '--directory' => $this->outputPath,
+            '--with-factories' => true
+        ])
+        ->assertSuccessful();
+
+        $factoryPath = database_path('factories/GeneratedFactories/UserFactory.php');
+        $this->assertFileExists($factoryPath);
+        
+        $content = file_get_contents($factoryPath);
+        $this->assertStringContainsString('namespace Database\Factories\GeneratedFactories', $content);
+        $this->assertStringContainsString('class UserFactory extends Factory', $content);
+        $this->assertStringContainsString("'name' => fake()->name()", $content);
+        $this->assertStringContainsString("'email' => fake()->safeEmail()", $content);
+    }
+
     protected function tearDown(): void
     {
         Schema::dropIfExists('users');
@@ -66,6 +88,13 @@ class ModelGeneratorTest extends TestCase
                 $parentDir = dirname($parentDir);
             }
             @rmdir(__DIR__ . '/../../test-output');
+        }
+
+        // Clean up generated factories
+        $factoryDir = database_path('factories/GeneratedFactories');
+        if (file_exists($factoryDir)) {
+            array_map('unlink', glob($factoryDir . '/*.*'));
+            rmdir($factoryDir);
         }
 
         parent::tearDown();
