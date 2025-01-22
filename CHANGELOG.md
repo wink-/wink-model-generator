@@ -15,10 +15,17 @@
 - Updated documentation with relationship examples
 - Implemented read-only transactions in MySQL schema reader
 - Implemented PRAGMA query_only in SQLite schema reader
+- Dropped support for Laravel 10 to focus on Laravel 11 features
+- Updated minimum PHP requirement to 8.2
+- Refactored SQLite schema reader to use raw SQL queries
 
 ### Security
 - Prevented any potential database modifications during schema reading
 - Added safeguards to ensure schema readers can only perform read operations
+
+### Breaking Changes
+- Now requires Laravel 11 and PHP 8.2
+- Removed support for Laravel 10
 
 ## [v0.1.4]
 

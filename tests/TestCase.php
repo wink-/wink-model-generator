@@ -1,6 +1,6 @@
 <?php
 
-namespace Wink\ModelGenerator\Tests;
+namespace Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
 use Wink\ModelGenerator\ModelGeneratorServiceProvider;
@@ -22,6 +22,7 @@ abstract class TestCase extends Orchestra
             'driver' => 'sqlite',
             'database' => ':memory:',
             'prefix' => '',
+            'foreign_key_constraints' => true,
         ]);
     }
 }

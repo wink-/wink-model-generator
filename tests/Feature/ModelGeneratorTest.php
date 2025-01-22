@@ -1,10 +1,11 @@
 <?php
 
-namespace Wink\ModelGenerator\Tests\Feature;
+namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\File;
-use Wink\ModelGenerator\Tests\TestCase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class ModelGeneratorTest extends TestCase
 {
@@ -13,6 +14,9 @@ class ModelGeneratorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Set database to writable mode for setup
+        DB::connection('testing')->statement('PRAGMA query_only = 0');
 
         // Create test table
         Schema::create('users', function ($table) {
@@ -48,12 +52,16 @@ class ModelGeneratorTest extends TestCase
 
     protected function tearDown(): void
     {
+        // Set database to writable mode for cleanup
+        DB::connection('testing')->statement('PRAGMA query_only = 0');
+        
         // Clean up
-        Schema::dropIfExists('users');
         if (File::isDirectory($this->outputPath)) {
             File::deleteDirectory($this->outputPath);
         }
-        
+
+        Schema::dropIfExists('users');
+
         parent::tearDown();
     }
 }
