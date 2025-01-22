@@ -1,7 +1,7 @@
 # Laravel Model Generator
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wink/wink-model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
-[![Tests](https://github.com/wink-/wink-model-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/wink-/wink-model-generator/actions/workflows/tests.yml)
+[![Tests](https://github.com/wink-/wink-model-generator/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/wink-/wink-model-generator/actions/workflows/tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/wink/model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
 [![License](https://img.shields.io/packagist/l/wink/model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
 
@@ -18,6 +18,7 @@ A powerful Laravel package that automatically generates Eloquent models from you
 - Handles custom database connections
 - Optional model factory generation
 - Connection-based directory structure for multi-database projects
+- Compatible with PHP 8.2, 8.3, and 8.4
 
 ## Installation
 
@@ -181,8 +182,8 @@ composer test
 
 ## Requirements
 
-- PHP ^8.1
-- Laravel ^10.0|^11.0
+- PHP 8.2 or higher (including PHP 8.3 and 8.4)
+- Laravel 11.x
 
 ## Contributing
 

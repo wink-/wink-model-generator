@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.2.3] - 2025-01-22
+
+### Added
+- Added PHP 8.4 support to test matrix
+- Verified compatibility with PHP 8.4
+
+### Changed
+- Updated GitHub Actions workflow to test against PHP 8.2, 8.3, and 8.4
+
 ## [v0.2.2] - 2025-01-22
 
 ### Added
