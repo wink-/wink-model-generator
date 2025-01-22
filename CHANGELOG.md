@@ -1,6 +1,6 @@
 # Changelog
 
-## [v0.1.5] - 2025-01-22
+## [v0.2.0] - 2025-01-22
 
 ### Added
 - Support for model generation with relationships
