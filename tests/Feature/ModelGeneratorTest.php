@@ -10,6 +10,9 @@ use Tests\TestCase;
 class ModelGeneratorTest extends TestCase
 {
     protected $outputPath;
+    protected $defaultOutputPath;
+    protected $factoryOutputPath;
+    protected $defaultFactoryOutputPath;
 
     protected function setUp(): void
     {
@@ -26,14 +29,26 @@ class ModelGeneratorTest extends TestCase
             $table->timestamps();
         });
 
-        // Set up output path
+        // Set up output paths
         $this->outputPath = __DIR__ . '/../../test-output/models';
-        if (!File::isDirectory($this->outputPath)) {
-            File::makeDirectory($this->outputPath, 0755, true);
+        $this->defaultOutputPath = app_path('Models/GeneratedModels/testing');
+        $this->factoryOutputPath = __DIR__ . '/../../test-output/factories';
+        $this->defaultFactoryOutputPath = database_path('factories/GeneratedFactories/testing');
+        
+        // Create directories if they don't exist
+        foreach ([
+            $this->outputPath, 
+            $this->defaultOutputPath,
+            $this->factoryOutputPath,
+            $this->defaultFactoryOutputPath
+        ] as $path) {
+            if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0755, true);
+            }
         }
     }
 
-    public function test_it_can_generate_model()
+    public function test_it_can_generate_model_in_custom_directory()
     {
         $this->artisan('wink:generate-models', [
             '--connection' => 'testing',
@@ -50,14 +65,70 @@ class ModelGeneratorTest extends TestCase
         $this->assertStringContainsString("'email'", $content);
     }
 
+    public function test_it_uses_connection_based_directory_by_default()
+    {
+        $this->artisan('wink:generate-models', [
+            '--connection' => 'testing',
+        ])->assertSuccessful();
+
+        $modelPath = $this->defaultOutputPath . '/User.php';
+        $this->assertFileExists($modelPath);
+        
+        $content = file_get_contents($modelPath);
+        $this->assertStringContainsString('class User extends Model', $content);
+        $this->assertStringContainsString('protected $fillable = [', $content);
+        $this->assertStringContainsString("'name'", $content);
+        $this->assertStringContainsString("'email'", $content);
+    }
+
+    public function test_it_can_generate_factory_in_custom_directory()
+    {
+        $this->artisan('wink:generate-models', [
+            '--connection' => 'testing',
+            '--with-factories' => true,
+            '--factory-directory' => $this->factoryOutputPath,
+        ])->assertSuccessful();
+
+        $factoryPath = $this->factoryOutputPath . '/UserFactory.php';
+        $this->assertFileExists($factoryPath);
+        
+        $content = file_get_contents($factoryPath);
+        $this->assertStringContainsString('class UserFactory extends Factory', $content);
+        $this->assertStringContainsString("'name' => fake()->", $content);
+        $this->assertStringContainsString("'email' => fake()->", $content);
+    }
+
+    public function test_it_uses_connection_based_factory_directory_by_default()
+    {
+        $this->artisan('wink:generate-models', [
+            '--connection' => 'testing',
+            '--with-factories' => true,
+        ])->assertSuccessful();
+
+        $factoryPath = $this->defaultFactoryOutputPath . '/UserFactory.php';
+        $this->assertFileExists($factoryPath);
+        
+        $content = file_get_contents($factoryPath);
+        $this->assertStringContainsString('class UserFactory extends Factory', $content);
+        $this->assertStringContainsString("'name' => fake()->", $content);
+        $this->assertStringContainsString("'email' => fake()->", $content);
+    }
+
     protected function tearDown(): void
     {
         // Set database to writable mode for cleanup
         DB::connection('testing')->statement('PRAGMA query_only = 0');
         
         // Clean up
-        if (File::isDirectory($this->outputPath)) {
-            File::deleteDirectory($this->outputPath);
+        foreach ([
+            $this->outputPath, 
+            $this->defaultOutputPath,
+            $this->factoryOutputPath,
+            $this->defaultFactoryOutputPath
+        ] as $path) {
+            if (File::isDirectory($path)) {
+                File::deleteDirectory($path);
+            }
         }
 
         Schema::dropIfExists('users');

@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.2.2] - 2025-01-22
+
+### Added
+- Connection-based directory structure for models and factories
+- New `--factory-directory` option for custom factory output location
+
+### Changed
+- Models are now generated in `app/Models/GeneratedModels/{connection}`
+- Factories are now generated in `database/factories/GeneratedFactories/{connection}`
+- Updated tests to verify connection-based directory structure
+
 ## [v0.2.1] - 2025-01-22
 
 ### Changed
