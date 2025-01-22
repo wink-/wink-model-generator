@@ -158,7 +158,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 ## Credits
 
-- [Josh Wingerd](https://github.com/wink-)
+- [Wink](https://github.com/wink-)
 - [All Contributors](../../contributors)
 
 ## License
