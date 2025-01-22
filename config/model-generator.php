@@ -1,5 +1,6 @@
-
 <?php
+
+use Illuminate\Support\Facades\Config;
 
 return [
     /*
@@ -10,7 +11,7 @@ return [
     | The default database connection to use for model generation
     |
     */
-    'default_connection' => env('DB_CONNECTION', 'mysql'),
+    'default_connection' => Config::get('database.default', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------

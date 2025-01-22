@@ -3,6 +3,7 @@ namespace Wink\ModelGenerator;
 
 use Illuminate\Support\ServiceProvider;
 use Wink\ModelGenerator\Commands\GenerateModels;
+use function config_path;
 
 class ModelGeneratorServiceProvider extends ServiceProvider
 {
@@ -11,6 +12,11 @@ class ModelGeneratorServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Merge config
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/model-generator.php', 'model-generator'
+        );
+
         // Register the command if we are using the application via CLI
         if ($this->app->runningInConsole()) {
             $this->commands([

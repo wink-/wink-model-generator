@@ -5,6 +5,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Config;
+
+// Add these Laravel helper function imports
+use function app_path;
+use function database_path;
+use function config;
+use function str_contains;
+use function file_exists;
 
 class GenerateModels extends Command
 {
@@ -13,7 +21,7 @@ class GenerateModels extends Command
      *
      * @var string
      */
-    protected $signature = 'app:generate-models 
+    protected $signature = 'wink:generate-models 
                           {--connection=sqlite : Database connection to use}
                           {--directory= : Full path where models should be generated}
                           {--with-relationships : Generate relationship methods}
@@ -25,22 +33,28 @@ class GenerateModels extends Command
      *
      * @var string
      */
-    protected $description = 'Generate models from SQLite database';
+    protected $description = 'Generate Eloquent models from your database schema';
 
     /**
      * Default Laravel tables to exclude
      */
-    private array $excludedTables = [
-        'migrations',
-        'failed_jobs',
-        'password_reset_tokens',
-        'personal_access_tokens',
-        'sessions',
-        'cache',
-        'jobs',
-        'cache_locks',
-        'job_batches'
-    ];
+    private array $excludedTables;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->excludedTables = config('model-generator.excluded_tables', [
+            'migrations',
+            'failed_jobs',
+            'password_reset_tokens',
+            'personal_access_tokens',
+            'sessions',
+            'cache',
+            'jobs',
+            'cache_locks',
+            'job_batches'
+        ]);
+    }
 
     /**
      * Execute the console command.

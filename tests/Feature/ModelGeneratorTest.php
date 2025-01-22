@@ -2,9 +2,9 @@
 
 namespace Wink\ModelGenerator\Tests\Feature;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Wink\ModelGenerator\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ModelGeneratorTest extends TestCase
 {
@@ -16,10 +16,6 @@ class ModelGeneratorTest extends TestCase
 
         // Set output path to a test directory within the package
         $this->outputPath = __DIR__ . '/../../test-output/Models/Test';
-
-        // Create a test SQLite database
-        config(['database.default' => 'sqlite']);
-        config(['database.connections.sqlite.database' => ':memory:']);
 
         // Create a test table
         Schema::create('users', function ($table) {
@@ -35,35 +31,27 @@ class ModelGeneratorTest extends TestCase
         }
     }
 
-    /** @test */
-    public function it_can_run_a_basic_test()
-    {
-        $this->assertTrue(true);
-    }
-
-    /** @test */
+    #[Test]
     public function it_can_generate_model_from_sqlite_table()
     {
-        // Verify the table exists
         $this->assertTrue(Schema::hasTable('users'), 'Users table does not exist');
 
-        // Run the command with verbose output for debugging
-        $this->artisan('app:generate-models', [
-            '--connection' => 'sqlite',
+        $this->artisan('wink:generate-models', [
+            '--connection' => 'testing',
             '--directory' => $this->outputPath,
-            '--verbose' => true
         ])
-        ->expectsOutput('Generating models...')
         ->assertSuccessful();
 
-        // Assert the model file was created in the correct directory
-        $this->assertDirectoryExists($this->outputPath);
         $this->assertFileExists($this->outputPath . '/User.php');
+        
+        // Verify the content of the generated file
+        $content = file_get_contents($this->outputPath . '/User.php');
+        $this->assertStringContainsString('class User extends Model', $content);
+        $this->assertStringContainsString('protected $connection = \'testing\'', $content);
     }
 
     protected function tearDown(): void
     {
-        // Clean up the test table
         Schema::dropIfExists('users');
 
         // Clean up generated files

@@ -20,8 +20,10 @@ A powerful Laravel package that automatically generates Eloquent models from you
 
 ## Installation
 
+You can install the package via composer:
+
 ```bash
-composer require wink/wink-model-generator
+composer require wink/wink-model-generator --dev
 ```
 
 The package will automatically register its service provider.
@@ -39,29 +41,29 @@ php artisan vendor:publish --tag="model-generator-config"
 Basic usage:
 
 ```bash
-php artisan app:generate-models
+php artisan wink:generate-models
 ```
 
 ### Command Options
 
 ```bash
 # Specify database connection (default: sqlite)
-php artisan app:generate-models --connection=mysql
+php artisan wink:generate-models --connection=mysql
 
 # Generate models in a specific directory
-php artisan app:generate-models --directory=/path/to/models
+php artisan wink:generate-models --directory=/path/to/models
 
 # Include relationships
-php artisan app:generate-models --with-relationships
+php artisan wink:generate-models --with-relationships
 
 # Generate model factories
-php artisan app:generate-models --with-factories
+php artisan wink:generate-models --with-factories
 
 # Generate validation rules
-php artisan app:generate-models --with-rules
+php artisan wink:generate-models --with-rules
 
 # Combine options
-php artisan app:generate-models --connection=mysql --directory=app/Models/Generated --with-relationships
+php artisan wink:generate-models --connection=mysql --directory=app/Models/Generated --with-relationships
 ```
 
 ### Directory Option
@@ -75,13 +77,13 @@ If no directory is specified, models will be generated in `app/Models/GeneratedM
 Examples:
 ```bash
 # Using absolute path
-php artisan app:generate-models --directory=/var/www/html/app/Models/Custom
+php artisan wink:generate-models --directory=/var/www/html/app/Models/Custom
 
 # Using relative path
-php artisan app:generate-models --directory=app/Models/Admin
+php artisan wink:generate-models --directory=app/Models/Admin
 
 # Using path with spaces (quote the path)
-php artisan app:generate-models --directory="app/Models/Generated Models"
+php artisan wink:generate-models --directory="app/Models/Generated Models"
 ```
 
 ## Generated Model Features
@@ -137,23 +139,28 @@ class User extends Model
 
 ## Testing
 
-The package includes comprehensive tests. To run them:
-
 ```bash
 composer test
 ```
 
-For SQLite testing, the package supports in-memory databases, making it easy to test your model generation without setting up a separate database.
-
 ## Requirements
 
 - PHP ^8.1
-- Laravel ^10.0
+- Laravel ^10.0|^11.0
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Please see [CONTRIBUTING](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT](.github/CODE_OF_CONDUCT.md) for details.
+
+## Security Vulnerabilities
+
+Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
+
+## Credits
+
+- [Josh Wingerd](https://github.com/wink-)
+- [All Contributors](../../contributors)
 
 ## License
 
-This package is open-sourced software licensed under the MIT license.
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
