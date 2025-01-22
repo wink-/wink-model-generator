@@ -1,0 +1,89 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * {{ modelName }} Model
+ *
+{{ propertiesString }}
+ */
+class {{ modelName }} extends Model
+{
+    use HasFactory;
+
+    /**
+     * The database connection that should be used by the model.
+     */
+    protected $connection = '{{ connection }}';
+    
+    /**
+     * The table associated with the model.
+     */
+    protected $table = '{{ tableName }}';
+
+    /**
+     * The primary key associated with the table.
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * Indicates if the model's ID is auto-incrementing.
+     */
+    public $incrementing = true;
+
+    /**
+     * The data type of the auto-incrementing ID.
+     */
+    protected $keyType = 'int';
+
+    /**
+     * Indicates if the model should be timestamped.
+     */
+    public $timestamps = {{ timestampsValue }};
+
+    /**
+     * The storage format of the model's date columns.
+     */
+    protected $dateFormat = 'Y-m-d H:i:s';
+
+    /**
+     * The attributes that are mass assignable.
+     */
+    protected $fillable = [
+        {{ fillableString }}
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     */
+    protected $hidden = [];
+
+    /**
+     * The attributes that should be visible in serialization.
+     */
+    protected $visible = [];
+
+    /**
+     * The attributes that should be cast.
+     */
+    protected $casts = [
+        {{ castsString }}
+    ];
+
+    /**
+     * The model's default values for attributes.
+     */
+    protected $attributes = [];
+
+    /**
+     * The validation rules for the model.
+     */
+    public static $rules = [
+        {{ rulesString }}
+    ];
+
+{{ relationshipsString }}
+}

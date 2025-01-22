@@ -1,18 +1,20 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Wink\ModelGenerator\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Config;
-
-// Add these Laravel helper function imports
-use function app_path;
-use function database_path;
-use function config;
-use function str_contains;
-use function file_exists;
+use Wink\ModelGenerator\Config\GeneratorConfig;
+use Wink\ModelGenerator\Database\MySqlSchemaReader;
+use Wink\ModelGenerator\Database\SchemaReader;
+use Wink\ModelGenerator\Database\SqliteSchemaReader;
+use Wink\ModelGenerator\Generators\ModelGenerator;
+use Wink\ModelGenerator\Generators\FactoryGenerator;
+use RuntimeException;
 
 class GenerateModels extends Command
 {
@@ -35,435 +37,138 @@ class GenerateModels extends Command
      */
     protected $description = 'Generate Eloquent models from your database schema';
 
-    /**
-     * Default Laravel tables to exclude
-     */
-    private array $excludedTables;
+    private GeneratorConfig $config;
+    private SchemaReader $schemaReader;
+    private ModelGenerator $modelGenerator;
+    private FactoryGenerator $factoryGenerator;
 
-    public function __construct()
+    public function __construct(GeneratorConfig $config)
     {
         parent::__construct();
-        $this->excludedTables = config('model-generator.excluded_tables', [
-            'migrations',
-            'failed_jobs',
-            'password_reset_tokens',
-            'personal_access_tokens',
-            'sessions',
-            'cache',
-            'jobs',
-            'cache_locks',
-            'job_batches'
-        ]);
+        $this->config = $config;
     }
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         try {
             $connection = $this->option('connection');
             $directory = $this->option('directory');
             
-            // Use the provided directory path directly instead of appending to app_path
-            $baseDir = $directory ?: app_path('Models/GeneratedModels');
+            $this->initializeGenerators($connection);
+            $this->displayStartupInfo($connection, $directory);
             
-            $this->info('Generating models...');
-            
-            if (!File::isDirectory($baseDir)) {
-                File::makeDirectory($baseDir, 0755, true);
-            }
+            // Use the provided directory path or default from config
+            $baseDir = $directory ?: $this->config->getModelPath();
+            $this->createDirectory($baseDir);
 
-            $databaseName = config("database.connections.{$connection}.database");
+            // Get the tables
+            $tables = $this->schemaReader->getTables($connection, $this->config->getExcludedTables());
 
-            // For SQLite in-memory database, skip the file check
-            if ($databaseName !== ':memory:' && !file_exists($databaseName)) {
-                $this->error("Database file {$databaseName} not found.");
+            if (empty($tables)) {
+                $this->error('No tables found in database.');
                 return 1;
             }
 
-            // Replace the direct query with database-agnostic method
-            $excludedTablesString = "'" . implode("','", $this->excludedTables) . "'";
-            $tables = $this->getTables($connection, $excludedTablesString);
-
-            foreach ($tables as $table) {
-                $tableName = $table->name;
-                $modelName = Str::studly(Str::singular($tableName));
-                
-                // Get columns based on connection type
-                $columns = $this->getTableColumns($connection, $tableName);
-
-                $fillable = [];
-                $properties = [];
-                $timestamps = false;
-                $relationships = [];
-                $casts = [];
-                $rules = [];
-
-                if ($this->option('with-relationships')) {
-                    $foreignKeys = $this->getForeignKeys($connection, $tableName);
-                    foreach ($foreignKeys as $fk) {
-                        $relationships[] = $this->generateRelationship($fk);
-                    }
-                }
-
-                foreach ($columns as $column) {
-                    if ($column->name === 'created_at' || $column->name === 'updated_at') {
-                        $timestamps = true;
-                        continue;
-                    }
-                    if ($column->name !== 'id') {
-                        $fillable[] = "'{$column->name}'";
-                        $phpType = $this->mapSqliteTypeToPhp($column->type);
-                        $properties[] = " * @property {$phpType} \${$column->name}";
-                    }
-
-                    // Add casts for specific types
-                    if (str_contains($column->type, 'json')) {
-                        $casts[] = "'{$column->name}' => 'array'";
-                    } elseif (str_contains($column->name, '_at')) {
-                        $casts[] = "'{$column->name}' => 'datetime'";
-                    }
-
-                    // Generate validation rules
-                    if ($this->option('with-rules')) {
-                        $rules[] = $this->generateValidationRule($column);
-                    }
-                }
-
-                $fillableString = implode(",\n        ", $fillable);
-                $propertiesString = implode("\n", $properties);
-                $relationshipsString = implode("\n\n", $relationships);
-                $castsString = implode(",\n        ", $casts);
-                $rulesString = implode(",\n        ", $rules);
-
-                // Modify namespace for subdirectory
-                $namespace = 'App\\Models\\GeneratedModels';
-                if ($directory) {
-                    $namespace .= '\\' . str_replace('/', '\\', $directory);
-                }
-
-                // Convert boolean to string before interpolation
-                $timestampsValue = $timestamps ? 'true' : 'false';
-
-                $modelContent = $this->generateModelContent(
-                    $namespace, 
-                    $modelName, 
-                    $tableName, 
-                    $connection,
-                    $timestampsValue,
-                    $fillableString,
-                    $propertiesString,
-                    $relationshipsString,
-                    $castsString,
-                    $rulesString
-                );
-
-                $modelPath = $baseDir . "/{$modelName}.php";
-                File::put($modelPath, $modelContent);
-                $this->info("Model {$modelName} created at {$modelPath}");
-            }
+            $this->info('Processing tables...');
+            $this->generateModels($tables, $connection, $baseDir);
 
             if ($this->option('with-factories')) {
-                $this->generateFactories($baseDir, $tables, $connection);
+                $this->info("Generating factories...");
+                $this->generateFactories($tables, $connection);
             }
 
-            $this->info('Models generated successfully!');
+            $this->info('Model generation completed successfully.');
             return 0;
         } catch (\Exception $e) {
-            $this->error("Error generating models: " . $e->getMessage());
+            $this->error("Error: " . $e->getMessage());
+            $this->error("Stack trace: " . $e->getTraceAsString());
             return 1;
         }
     }
 
-    private function getTableColumns($connection, $tableName)
+    private function initializeGenerators(string $connection): void
     {
-        if (config("database.connections.{$connection}.driver") === 'sqlite') {
-            return DB::connection($connection)->select("PRAGMA table_info({$tableName})");
-        } else {
-            return DB::connection($connection)
-                ->select("SELECT 
-                    COLUMN_NAME as name,
-                    DATA_TYPE as type,
-                    IS_NULLABLE as nullable,
-                    COLUMN_DEFAULT as default
-                FROM information_schema.columns 
-                WHERE table_schema = ? 
-                AND table_name = ?", 
-                [config("database.connections.{$connection}.database"), $tableName]);
-        }
-    }
-
-    private function getForeignKeys($connection, $tableName)
-    {
-        if (config("database.connections.{$connection}.driver") === 'sqlite') {
-            return DB::connection($connection)
-                ->select("SELECT * FROM pragma_foreign_key_list('{$tableName}')");
-        } else {
-            return DB::connection($connection)
-                ->select("SELECT 
-                    COLUMN_NAME as 'from',
-                    REFERENCED_TABLE_NAME as 'table',
-                    REFERENCED_COLUMN_NAME as 'to'
-                FROM information_schema.KEY_COLUMN_USAGE
-                WHERE TABLE_SCHEMA = ? 
-                AND TABLE_NAME = ? 
-                AND REFERENCED_TABLE_NAME IS NOT NULL", 
-                [config("database.connections.{$connection}.database"), $tableName]);
-        }
-    }
-
-    private function mapSqliteTypeToPhp(string $sqliteType): string
-    {
-        return match (strtolower($sqliteType)) {
-            'integer', 'int', 'bigint', 'smallint', 'tinyint' => 'int',
-            'real', 'float', 'double', 'decimal' => 'float',
-            'boolean', 'bool', 'tinyint(1)' => 'bool',
-            'datetime', 'timestamp', 'date' => 'string|\\DateTime',
-            'json', 'longtext' => 'array',
-            default => 'string',
+        $driver = config("database.connections.{$connection}.driver") ?? 'sqlite';
+        
+        $this->schemaReader = match ($driver) {
+            'sqlite' => new SqliteSchemaReader(),
+            'mysql' => new MySqlSchemaReader(),
+            default => throw new RuntimeException("Unsupported database driver: {$driver}")
         };
+
+        $this->modelGenerator = new ModelGenerator($this->config);
+        $this->factoryGenerator = new FactoryGenerator($this->config);
     }
 
-    private function generateRelationship($foreignKey): string
+    private function displayStartupInfo(string $connection, ?string $directory): void
     {
-        $relatedModel = Str::studly(Str::singular($foreignKey->table));
-        return <<<EOT
-    public function {$foreignKey->to}()
-    {
-        return \$this->belongsTo(\\App\\Models\\{$relatedModel}::class, '{$foreignKey->from}');
-    }
-EOT;
-    }
-
-    private function generateValidationRule($column): string
-    {
-        $rules = ["'{$column->name}' => ['"];
-        if ($column->notnull) {
-            $rules[] = 'required';
-        }
-        if (str_contains($column->type, 'int')) {
-            $rules[] = 'integer';
-        }
-        return implode('|', $rules) . "']";
+        $this->info('Starting model generation with:');
+        $this->info("Connection: $connection");
+        $this->info("Directory: " . ($directory ?: $this->config->getModelPath()));
+        $this->info("With Relationships: " . ($this->option('with-relationships') ? 'yes' : 'no'));
+        $this->info("With Factories: " . ($this->option('with-factories') ? 'yes' : 'no'));
+        $this->info("With Rules: " . ($this->option('with-rules') ? 'yes' : 'no'));
     }
 
-    private function generateFactories(string $baseDir, array $tables, string $connection): void
+    private function createDirectory(string $path): void
     {
-        // Change the factory directory path
-        $factoryDir = database_path('factories/GeneratedFactories');
-        if (!File::isDirectory($factoryDir)) {
-            File::makeDirectory($factoryDir, 0755, true);
+        if (!File::isDirectory($path)) {
+            File::makeDirectory($path, 0755, true);
         }
+        $this->info('Output directory created/verified: ' . $path);
+    }
+
+    private function generateModels(array $tables, string $connection, string $baseDir): void
+    {
+        foreach ($tables as $table) {
+            $tableName = $table->name;
+            $modelName = Str::studly(Str::singular($tableName));
+            
+            $this->info("Processing table: $tableName -> $modelName");
+            
+            $columns = $this->schemaReader->getTableColumns($connection, $tableName);
+            $this->info("Found " . count($columns) . " columns");
+
+            $foreignKeys = [];
+            if ($this->option('with-relationships')) {
+                $foreignKeys = $this->schemaReader->getForeignKeys($connection, $tableName);
+                $this->info("Found " . count($foreignKeys) . " relationships");
+            }
+
+            $modelContent = $this->modelGenerator->generate(
+                $modelName,
+                $tableName,
+                $connection,
+                $columns,
+                $foreignKeys,
+                $this->option('with-relationships'),
+                $this->option('with-rules')
+            );
+
+            $modelPath = $baseDir . '/' . $modelName . '.php';
+            File::put($modelPath, $modelContent);
+            $this->info("Model file created: $modelPath");
+        }
+    }
+
+    private function generateFactories(array $tables, string $connection): void
+    {
+        $factoryDir = $this->config->getFactoryPath();
+        $this->createDirectory($factoryDir);
 
         foreach ($tables as $table) {
             $tableName = $table->name;
             $modelName = Str::studly(Str::singular($tableName));
             
-            // Get columns for factory definitions
-            $columns = $this->getTableColumns($connection, $tableName);
-            
-            $definitions = [];
-            foreach ($columns as $column) {
-                if ($column->name === 'id' || $column->name === 'created_at' || $column->name === 'updated_at') {
-                    continue;
-                }
-                
-                $faker = $this->getFakerMethod($column);
-                $definitions[] = "            '{$column->name}' => fake()->{$faker}";
-            }
-            
-            $definitionsString = implode(",\n", $definitions);
-            
-            $factoryContent = <<<EOT
-<?php
-
-namespace Database\Factories\GeneratedFactories;
-
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\GeneratedModels\\{$modelName};
-
-class {$modelName}Factory extends Factory
-{
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
-    protected \$model = {$modelName}::class;
-
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    public function definition(): array
-    {
-        return [
-{$definitionsString}
-        ];
-    }
-}
-EOT;
+            $columns = $this->schemaReader->getTableColumns($connection, $tableName);
+            $factoryContent = $this->factoryGenerator->generate($modelName, $columns);
 
             $factoryPath = $factoryDir . "/{$modelName}Factory.php";
             File::put($factoryPath, $factoryContent);
             $this->info("Factory {$modelName}Factory created at {$factoryPath}");
-        }
-    }
-
-    private function getFakerMethod($column): string
-    {
-        $name = strtolower($column->name);
-        $type = strtolower($column->type);
-
-        // Common column name patterns
-        if (str_contains($name, 'email')) return 'safeEmail()';
-        if (str_contains($name, 'name')) return 'name()';
-        if (str_contains($name, 'phone')) return 'phoneNumber()';
-        if (str_contains($name, 'address')) return 'address()';
-        if (str_contains($name, 'city')) return 'city()';
-        if (str_contains($name, 'country')) return 'country()';
-        if (str_contains($name, 'zip')) return 'postcode()';
-        if (str_contains($name, 'password')) return 'password()';
-        if (str_contains($name, 'url')) return 'url()';
-        if (str_contains($name, 'description')) return 'text()';
-        if (str_contains($name, 'title')) return 'sentence()';
-
-        // Data types
-        return match($type) {
-            'int', 'integer', 'bigint', 'smallint', 'tinyint' => 'randomNumber()',
-            'decimal', 'float', 'double' => 'randomFloat()',
-            'boolean', 'bool' => 'boolean()',
-            'date' => 'date()',
-            'datetime', 'timestamp' => 'dateTime()',
-            'json', 'array' => 'words(3, true)',
-            default => 'text()'
-        };
-    }
-
-    private function generateModelContent(
-        string $namespace,
-        string $modelName,
-        string $tableName,
-        string $connection,
-        string $timestampsValue,
-        string $fillableString,
-        string $propertiesString,
-        string $relationshipsString,
-        string $castsString,
-        string $rulesString
-    ): string {
-        return <<<EOT
-<?php
-
-namespace {$namespace};
-
-use Illuminate\\Database\\Eloquent\\Factories\\HasFactory;
-use Illuminate\\Database\\Eloquent\\Model;
-
-/**
- * {$modelName} Model
- *
-{$propertiesString}
- */
-class {$modelName} extends Model
-{
-    use HasFactory;
-
-    /**
-     * The database connection that should be used by the model.
-     */
-    protected \$connection = '{$connection}';
-    
-    /**
-     * The table associated with the model.
-     */
-    protected \$table = '{$tableName}';
-
-    /**
-     * The primary key associated with the table.
-     */
-    protected \$primaryKey = 'id';
-
-    /**
-     * Indicates if the model's ID is auto-incrementing.
-     */
-    public \$incrementing = true;
-
-    /**
-     * The data type of the auto-incrementing ID.
-     */
-    protected \$keyType = 'int';
-
-    /**
-     * Indicates if the model should be timestamped.
-     */
-    public \$timestamps = {$timestampsValue};
-
-    /**
-     * The storage format of the model's date columns.
-     */
-    protected \$dateFormat = 'Y-m-d H:i:s';
-
-    /**
-     * The attributes that are mass assignable.
-     */
-    protected \$fillable = [
-        {$fillableString}
-    ];
-
-    /**
-     * The attributes that should be hidden for serialization.
-     */
-    protected \$hidden = [];
-
-    /**
-     * The attributes that should be visible in serialization.
-     */
-    protected \$visible = [];
-
-    /**
-     * The attributes that should be cast.
-     */
-    protected \$casts = [
-        {$castsString}
-    ];
-
-    /**
-     * The model's default values for attributes.
-     */
-    protected \$attributes = [];
-
-    /**
-     * The validation rules for the model.
-     */
-    public static \$rules = [
-        {$rulesString}
-    ];
-
-{$relationshipsString}
-}
-
-EOT;
-    }
-
-    private function getTables($connection, $excludedTablesString)
-    {
-        if (config("database.connections.{$connection}.driver") === 'sqlite') {
-            return DB::connection($connection)->select(
-                "SELECT name FROM sqlite_master 
-                WHERE type='table' 
-                AND name NOT LIKE 'sqlite_%'
-                AND name NOT IN ({$excludedTablesString});"
-            );
-        } else {
-            return DB::connection($connection)
-                ->select("SELECT table_name as name 
-                         FROM information_schema.tables 
-                         WHERE table_schema = ? 
-                         AND table_name NOT IN ({$excludedTablesString})", 
-                         [config("database.connections.{$connection}.database")]);
         }
     }
 }

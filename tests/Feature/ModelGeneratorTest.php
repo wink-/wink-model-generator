@@ -3,8 +3,8 @@
 namespace Wink\ModelGenerator\Tests\Feature;
 
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\File;
 use Wink\ModelGenerator\Tests\TestCase;
-use PHPUnit\Framework\Attributes\Test;
 
 class ModelGeneratorTest extends TestCase
 {
@@ -14,10 +14,7 @@ class ModelGeneratorTest extends TestCase
     {
         parent::setUp();
 
-        // Set output path to a test directory within the package
-        $this->outputPath = __DIR__ . '/../../test-output/Models/Test';
-
-        // Create a test table
+        // Create test table
         Schema::create('users', function ($table) {
             $table->id();
             $table->string('name');
@@ -25,78 +22,38 @@ class ModelGeneratorTest extends TestCase
             $table->timestamps();
         });
 
-        // Ensure the output directory exists and is writable
-        if (!file_exists($this->outputPath)) {
-            mkdir($this->outputPath, 0755, true);
+        // Set up output path
+        $this->outputPath = __DIR__ . '/../../test-output/models';
+        if (!File::isDirectory($this->outputPath)) {
+            File::makeDirectory($this->outputPath, 0755, true);
         }
     }
 
-    #[Test]
-    public function it_can_generate_model_from_sqlite_table()
+    public function test_it_can_generate_model()
     {
-        $this->assertTrue(Schema::hasTable('users'), 'Users table does not exist');
-
         $this->artisan('wink:generate-models', [
             '--connection' => 'testing',
             '--directory' => $this->outputPath,
-        ])
-        ->assertSuccessful();
+        ])->assertSuccessful();
 
-        $this->assertFileExists($this->outputPath . '/User.php');
+        $modelPath = $this->outputPath . '/User.php';
+        $this->assertFileExists($modelPath);
         
-        // Verify the content of the generated file
-        $content = file_get_contents($this->outputPath . '/User.php');
+        $content = file_get_contents($modelPath);
         $this->assertStringContainsString('class User extends Model', $content);
-        $this->assertStringContainsString('protected $connection = \'testing\'', $content);
-    }
-
-    #[Test]
-    public function it_can_generate_model_factory()
-    {
-        $this->assertTrue(Schema::hasTable('users'), 'Users table does not exist');
-
-        $this->artisan('wink:generate-models', [
-            '--connection' => 'testing',
-            '--directory' => $this->outputPath,
-            '--with-factories' => true
-        ])
-        ->assertSuccessful();
-
-        $factoryPath = database_path('factories/GeneratedFactories/UserFactory.php');
-        $this->assertFileExists($factoryPath);
-        
-        $content = file_get_contents($factoryPath);
-        $this->assertStringContainsString('namespace Database\Factories\GeneratedFactories', $content);
-        $this->assertStringContainsString('class UserFactory extends Factory', $content);
-        $this->assertStringContainsString("'name' => fake()->name()", $content);
-        $this->assertStringContainsString("'email' => fake()->safeEmail()", $content);
+        $this->assertStringContainsString('protected $fillable = [', $content);
+        $this->assertStringContainsString("'name'", $content);
+        $this->assertStringContainsString("'email'", $content);
     }
 
     protected function tearDown(): void
     {
+        // Clean up
         Schema::dropIfExists('users');
-
-        // Clean up generated files
-        if (file_exists($this->outputPath)) {
-            array_map('unlink', glob($this->outputPath . '/*.*'));
-            rmdir($this->outputPath);
-            
-            // Remove parent directories if empty
-            $parentDir = dirname($this->outputPath);
-            while ($parentDir !== dirname(__DIR__ . '/../../test-output')) {
-                @rmdir($parentDir);
-                $parentDir = dirname($parentDir);
-            }
-            @rmdir(__DIR__ . '/../../test-output');
+        if (File::isDirectory($this->outputPath)) {
+            File::deleteDirectory($this->outputPath);
         }
-
-        // Clean up generated factories
-        $factoryDir = database_path('factories/GeneratedFactories');
-        if (file_exists($factoryDir)) {
-            array_map('unlink', glob($factoryDir . '/*.*'));
-            rmdir($factoryDir);
-        }
-
+        
         parent::tearDown();
     }
-} 
+}

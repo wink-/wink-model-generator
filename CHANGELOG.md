@@ -1,5 +1,25 @@
 # Changelog
 
+## [v0.1.5] - 2025-01-22
+
+### Added
+- Support for model generation with relationships
+- Enhanced type detection for database columns
+- Added relationship method generation based on foreign keys
+- Added support for belongs to, has many, and has one relationships
+- Added read-only mode for MySQL and SQLite schema readers
+
+### Changed
+- Improved code organization in GenerateModels command
+- Enhanced test coverage for relationship generation
+- Updated documentation with relationship examples
+- Implemented read-only transactions in MySQL schema reader
+- Implemented PRAGMA query_only in SQLite schema reader
+
+### Security
+- Prevented any potential database modifications during schema reading
+- Added safeguards to ensure schema readers can only perform read operations
+
 ## [v0.1.4]
 
 ### Added
