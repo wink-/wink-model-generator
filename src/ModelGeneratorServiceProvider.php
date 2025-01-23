@@ -7,6 +7,7 @@ namespace Wink\ModelGenerator;
 use Illuminate\Support\ServiceProvider;
 use Wink\ModelGenerator\Commands\GenerateModels;
 use Wink\ModelGenerator\Commands\ValidateModelNamespaces;
+use Wink\ModelGenerator\Commands\ValidateFactoryNamespaces;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 
 class ModelGeneratorServiceProvider extends ServiceProvider
@@ -36,6 +37,7 @@ class ModelGeneratorServiceProvider extends ServiceProvider
             $this->commands([
                 GenerateModels::class,
                 ValidateModelNamespaces::class,
+                ValidateFactoryNamespaces::class,
             ]);
 
             // Optional: Publish configuration

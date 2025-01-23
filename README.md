@@ -160,25 +160,34 @@ php artisan wink:generate-models --connection=mysql --with-factories
 
 ### Namespace Validation
 
-The package includes a command to validate and fix model namespaces according to PSR-4 standards:
+The package includes commands to validate and fix namespaces for both models and factories according to PSR-4 standards:
 
 ```bash
 # Check model namespaces
-php artisan wink:validate-namespaces
+php artisan wink:validate-model-namespaces
 
 # Validate models in a specific directory
-php artisan wink:validate-namespaces --directory=app/Models/Admin
+php artisan wink:validate-model-namespaces --directory=app/Models/Admin
 
-# Automatically fix incorrect namespaces
-php artisan wink:validate-namespaces --fix
+# Automatically fix incorrect model namespaces
+php artisan wink:validate-model-namespaces --fix
+
+# Check factory namespaces
+php artisan wink:validate-factory-namespaces
+
+# Validate factories in a specific directory
+php artisan wink:validate-factory-namespaces --directory=database/factories/Admin
+
+# Automatically fix incorrect factory namespaces
+php artisan wink:validate-factory-namespaces --fix
 ```
 
-The namespace validator:
-- Ensures namespaces match the physical file location
-- Creates backup files before making changes (when using --fix)
-- Provides detailed reporting of namespace mismatches
-- Supports recursive directory scanning
-- Handles both Laravel's default App namespace and custom namespaces
+The namespace validators:
+- Ensure namespaces match the physical file location
+- Create backup files before making changes (when using --fix)
+- Provide detailed reporting of namespace mismatches
+- Support recursive directory scanning
+- Handle Laravel's default namespaces (App for models, Database\Factories for factories)
 
 ## Generated Model Features
 

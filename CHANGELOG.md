@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.2.7] - 2025-01-23
+
+### Added
+- New `wink:validate-factory-namespaces` command to verify and fix factory namespaces
+- PSR-4 namespace validation for factory files
+- Automatic factory namespace correction with --fix option
+- Backup creation before modifying factory files
+- Support for recursive directory scanning
+- Detailed reporting of factory namespace mismatches
+
+### Changed
+- Renamed `wink:validate-namespaces` command to `wink:validate-model-namespaces` for consistency
+
 ## [v0.2.6] - 2025-01-23
 
 ### Added

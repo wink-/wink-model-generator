@@ -59,7 +59,7 @@ MODEL;
         // Create a model with correct namespace
         File::put($this->testModelDir . '/Inventory.php', $this->validModel);
 
-        $this->artisan('wink:validate-namespaces')
+        $this->artisan('wink:validate-model-namespaces')
             ->expectsOutput('All model namespaces are correct!')
             ->assertExitCode(0);
     }
@@ -70,7 +70,7 @@ MODEL;
         // Create a model with incorrect namespace
         File::put($this->testModelDir . '/Inventory.php', $this->invalidModel);
 
-        $this->artisan('wink:validate-namespaces')
+        $this->artisan('wink:validate-model-namespaces')
             ->expectsOutput('Namespace mismatch in: ' . str_replace('\\', '/', $this->testModelDir . '/Inventory.php'))
             ->expectsOutput('Current:  App\Models\Users')
             ->expectsOutput('Expected: App\Models\Admin')
@@ -84,7 +84,7 @@ MODEL;
         $modelPath = $this->testModelDir . '/Inventory.php';
         File::put($modelPath, $this->invalidModel);
 
-        $this->artisan('wink:validate-namespaces --fix')
+        $this->artisan('wink:validate-model-namespaces --fix')
             ->expectsOutput('Fixed namespace in: ' . str_replace('\\', '/', $modelPath))
             ->assertExitCode(0);
 
@@ -102,7 +102,7 @@ MODEL;
         $modelPath = $this->testModelDir . '/Inventory.php';
         File::put($modelPath, $this->invalidModel);
 
-        $this->artisan('wink:validate-namespaces --fix');
+        $this->artisan('wink:validate-model-namespaces --fix');
 
         // Verify backup file exists and contains original content
         $this->assertTrue(File::exists($modelPath . '.bak'));
@@ -117,7 +117,7 @@ MODEL;
     {
         $nonexistentDir = app_path('NonexistentModels');
 
-        $this->artisan('wink:validate-namespaces', [
+        $this->artisan('wink:validate-model-namespaces', [
             '--directory' => $nonexistentDir
         ])
             ->expectsOutput('Error: Directory not found: ' . $nonexistentDir)

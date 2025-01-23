@@ -11,18 +11,18 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 
-class ValidateModelNamespaces extends Command
+class ValidateFactoryNamespaces extends Command
 {
-    protected $signature = 'wink:validate-model-namespaces
-                         {--directory= : Directory containing models to validate}
+    protected $signature = 'wink:validate-factory-namespaces
+                         {--directory= : Directory containing factories to validate}
                          {--fix : Automatically fix incorrect namespaces}';
 
-    protected $description = 'Validate and optionally fix model namespaces according to PSR-4';
+    protected $description = 'Validate and optionally fix factory namespaces according to Laravel conventions';
 
     public function handle(): int
     {
         try {
-            $directory = $this->option('directory') ?: app_path('Models');
+            $directory = $this->option('directory') ?: database_path('factories');
             $shouldFix = $this->option('fix') === true;
 
             if (!File::isDirectory($directory)) {
@@ -30,7 +30,7 @@ class ValidateModelNamespaces extends Command
             }
 
             $this->info("Scanning directory: {$directory}");
-            $this->validateModels($directory, $shouldFix);
+            $this->validateFactories($directory, $shouldFix);
 
             return 0;
         } catch (\Exception $e) {
@@ -39,7 +39,7 @@ class ValidateModelNamespaces extends Command
         }
     }
 
-    private function validateModels(string $directory, bool $shouldFix): void
+    private function validateFactories(string $directory, bool $shouldFix): void
     {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($directory)
@@ -48,7 +48,7 @@ class ValidateModelNamespaces extends Command
         $issuesFound = false;
 
         foreach ($iterator as $file) {
-            if ($file->isFile() && $file->getExtension() === 'php') {
+            if ($file->isFile() && $file->getExtension() === 'php' && str_contains($file->getFilename(), 'Factory')) {
                 $namespace = $this->getCurrentNamespace($file->getPathname());
                 if ($namespace === null) {
                     continue; // Skip files without namespace
@@ -59,8 +59,7 @@ class ValidateModelNamespaces extends Command
                 if ($namespace !== $expectedNamespace) {
                     $issuesFound = true;
                     $this->line("");
-                    $normalizedPath = str_replace('\\', '/', $file->getPathname());
-                    $this->warn("Namespace mismatch in: " . $normalizedPath);
+                    $this->warn("Namespace mismatch in: " . str_replace('\\', '/', $file->getPathname()));
                     $this->line("Current:  {$namespace}");
                     $this->line("Expected: {$expectedNamespace}");
 
@@ -73,7 +72,7 @@ class ValidateModelNamespaces extends Command
         }
 
         if (!$issuesFound) {
-            $this->info("All model namespaces are correct!");
+            $this->info("All factory namespaces are correct!");
         } elseif (!$shouldFix) {
             $this->line("");
             $this->info("Run with --fix option to automatically correct namespaces");
@@ -98,13 +97,13 @@ class ValidateModelNamespaces extends Command
         // Remove base path to get relative path
         $relativePath = Str::after($filePath, $basePath . '/');
 
-        // Handle common Laravel paths
-        if (Str::startsWith($relativePath, 'app/')) {
-            $relativePath = Str::after($relativePath, 'app/');
-            $namespace = 'App';
+        // Handle factory paths
+        if (Str::startsWith($relativePath, 'database/factories')) {
+            $relativePath = Str::after($relativePath, 'database/factories/');
+            $namespace = 'Database\\Factories';
         } else {
-            // For other paths, assume PSR-4 autoloading
-            $namespace = 'Wink\\ModelGenerator';
+            // For other paths, maintain the namespace structure
+            $namespace = 'Database\\Factories';
         }
 
         // Get directory path without filename
