@@ -18,6 +18,7 @@ A powerful Laravel package that automatically generates Eloquent models from you
 - Handles custom database connections
 - Optional model factory generation
 - Connection-based directory structure for multi-database projects
+- PSR-4 namespace validation and auto-correction
 - Compatible with PHP 8.2, 8.3, and 8.4
 
 ## Installation
@@ -156,6 +157,28 @@ php artisan wink:generate-models --connection=mysql --with-factories
 # - Models in app/Models/GeneratedModels/mysql
 # - Factories in database/factories/GeneratedFactories/mysql
 ```
+
+### Namespace Validation
+
+The package includes a command to validate and fix model namespaces according to PSR-4 standards:
+
+```bash
+# Check model namespaces
+php artisan wink:validate-namespaces
+
+# Validate models in a specific directory
+php artisan wink:validate-namespaces --directory=app/Models/Admin
+
+# Automatically fix incorrect namespaces
+php artisan wink:validate-namespaces --fix
+```
+
+The namespace validator:
+- Ensures namespaces match the physical file location
+- Creates backup files before making changes (when using --fix)
+- Provides detailed reporting of namespace mismatches
+- Supports recursive directory scanning
+- Handles both Laravel's default App namespace and custom namespaces
 
 ## Generated Model Features
 

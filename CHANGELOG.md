@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.2.6] - 2025-01-23
+
+### Added
+- New `wink:validate-namespaces` command to verify and fix model namespaces
+- PSR-4 namespace validation for model files
+- Automatic namespace correction with --fix option
+- Backup creation before modifying files
+- Support for recursive directory scanning
+- Detailed reporting of namespace mismatches
+
 ## [v0.2.5] - 2025-01-22
 
 ### Fixed

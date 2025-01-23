@@ -6,6 +6,7 @@ namespace Wink\ModelGenerator;
 
 use Illuminate\Support\ServiceProvider;
 use Wink\ModelGenerator\Commands\GenerateModels;
+use Wink\ModelGenerator\Commands\ValidateModelNamespaces;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 
 class ModelGeneratorServiceProvider extends ServiceProvider
@@ -17,7 +18,8 @@ class ModelGeneratorServiceProvider extends ServiceProvider
     {
         // Merge config
         $this->mergeConfigFrom(
-            __DIR__.'/../config/model-generator.php', 'model-generator'
+            __DIR__ . '/../config/model-generator.php',
+            'model-generator'
         );
 
         $this->app->singleton(GeneratorConfig::class, function ($app) {
@@ -33,11 +35,12 @@ class ModelGeneratorServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 GenerateModels::class,
+                ValidateModelNamespaces::class,
             ]);
 
             // Optional: Publish configuration
             $this->publishes([
-                __DIR__.'/../config/model-generator.php' => config_path('model-generator.php'),
+                __DIR__ . '/../config/model-generator.php' => config_path('model-generator.php'),
             ], 'config');
         }
 
