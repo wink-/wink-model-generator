@@ -32,6 +32,39 @@ The package will automatically register its service provider.
 
 ## Configuration
 
+### Database Connections
+
+The package supports both MySQL and SQLite databases. Make sure your database connections are properly configured in `config/database.php`.
+
+#### SQLite Configuration
+For SQLite databases, ensure you:
+1. Use absolute paths for the database file
+2. Don't use the `url` key in the connection config (this can override the database path)
+3. Use Laravel's `database_path()` helper for proper path resolution
+
+Example SQLite configuration:
+```php
+'sqlite-connection' => [
+    'driver' => 'sqlite',
+    'database' => database_path('your-database.sqlite'),
+    'prefix' => '',
+    'foreign_key_constraints' => true,
+],
+```
+
+#### MySQL Configuration
+For MySQL databases, configure as normal:
+```php
+'mysql-connection' => [
+    'driver' => 'mysql',
+    'host' => env('DB_HOST', '127.0.0.1'),
+    'database' => env('DB_DATABASE'),
+    'username' => env('DB_USERNAME'),
+    'password' => env('DB_PASSWORD'),
+    // ...
+],
+```
+
 Publish the configuration file:
 
 ```bash
