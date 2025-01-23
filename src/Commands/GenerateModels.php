@@ -105,7 +105,17 @@ class GenerateModels extends Command
 
     private function initializeGenerators(string $connection): void
     {
-        $driver = config("database.connections.{$connection}.driver") ?? 'sqlite';
+        $config = config("database.connections.{$connection}");
+        
+        if (!$config) {
+            throw new RuntimeException("Database connection '{$connection}' not found in config/database.php");
+        }
+        
+        $driver = $config['driver'] ?? null;
+        
+        if (!$driver) {
+            throw new RuntimeException("No driver specified for connection '{$connection}'");
+        }
         
         $this->schemaReader = match ($driver) {
             'sqlite' => new SqliteSchemaReader(),

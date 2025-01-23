@@ -3,6 +3,8 @@
 ## [v0.2.4] - 2025-01-22
 
 ### Fixed
+- Fixed database driver detection to properly handle SQLite and MySQL connections
+- Added better error messages for missing or invalid database configurations
 - Fixed SQLite database existence check before setting PRAGMA query_only
 - Improved error messages for SQLite database path configuration
 
