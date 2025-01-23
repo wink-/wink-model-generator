@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.2.4] - 2025-01-22
+
+### Fixed
+- Fixed SQLite database existence check before setting PRAGMA query_only
+- Improved error messages for SQLite database path configuration
+
 ## [v0.2.3] - 2025-01-22
 
 ### Added

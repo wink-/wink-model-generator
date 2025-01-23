@@ -8,11 +8,24 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
+use RuntimeException;
 
 class SqliteSchemaReader implements SchemaReader
 {
     public function getTables(string $connection, array $excludedTables): array
     {
+        $config = config("database.connections.{$connection}");
+        
+        if (!isset($config['database'])) {
+            throw new RuntimeException("No database path configured for connection: {$connection}");
+        }
+
+        $database = $config['database'];
+        if ($database !== ':memory:' && !file_exists($database)) {
+            throw new RuntimeException("Database file at path [{$database}] does not exist. Ensure this is an absolute path to the database.");
+        }
+        
+        // Only set read-only mode if database exists
         DB::connection($connection)->statement('PRAGMA query_only = 1');
         
         $tables = DB::connection($connection)
@@ -30,7 +43,18 @@ class SqliteSchemaReader implements SchemaReader
 
     public function getTableColumns(string $connection, string $tableName): array
     {
-        // Set read-only mode for this connection
+        $config = config("database.connections.{$connection}");
+        
+        if (!isset($config['database'])) {
+            throw new RuntimeException("No database path configured for connection: {$connection}");
+        }
+
+        $database = $config['database'];
+        if ($database !== ':memory:' && !file_exists($database)) {
+            throw new RuntimeException("Database file at path [{$database}] does not exist. Ensure this is an absolute path to the database.");
+        }
+        
+        // Only set read-only mode if database exists
         DB::connection($connection)->statement('PRAGMA query_only = 1');
         
         return DB::connection($connection)
@@ -39,7 +63,18 @@ class SqliteSchemaReader implements SchemaReader
 
     public function getForeignKeys(string $connection, string $tableName): array
     {
-        // Set read-only mode for this connection
+        $config = config("database.connections.{$connection}");
+        
+        if (!isset($config['database'])) {
+            throw new RuntimeException("No database path configured for connection: {$connection}");
+        }
+
+        $database = $config['database'];
+        if ($database !== ':memory:' && !file_exists($database)) {
+            throw new RuntimeException("Database file at path [{$database}] does not exist. Ensure this is an absolute path to the database.");
+        }
+        
+        // Only set read-only mode if database exists
         DB::connection($connection)->statement('PRAGMA query_only = 1');
         
         return DB::connection($connection)
