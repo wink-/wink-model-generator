@@ -14,6 +14,7 @@ use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
 use Wink\ModelGenerator\Generators\ModelGenerator;
 use Wink\ModelGenerator\Generators\FactoryGenerator;
+use Wink\ModelGenerator\Generators\PolicyGenerator;
 use RuntimeException;
 
 class GenerateModels extends Command
@@ -27,9 +28,11 @@ class GenerateModels extends Command
                           {--connection=sqlite : Database connection to use}
                           {--directory= : Full path where models should be generated}
                           {--factory-directory= : Full path where factories should be generated}
+                          {--policy-directory= : Full path where policies should be generated}
                           {--with-relationships : Generate relationship methods}
                           {--with-factories : Generate model factories}
-                          {--with-rules : Generate validation rules}';
+                          {--with-rules : Generate validation rules}
+                          {--with-policies : Generate model policies}';
 
     /**
      * The console command description.
@@ -42,6 +45,9 @@ class GenerateModels extends Command
     private SchemaReader $schemaReader;
     private ModelGenerator $modelGenerator;
     private FactoryGenerator $factoryGenerator;
+    private PolicyGenerator $policyGenerator;
+    private string $policyNamespace;
+    private string $modelNamespace;
 
     public function __construct(GeneratorConfig $config)
     {
@@ -82,6 +88,26 @@ class GenerateModels extends Command
                 $factoryBaseDir = $factoryDirectory ?: $this->getDefaultFactoryDirectory($connection);
                 $this->createDirectory($factoryBaseDir);
                 $this->generateFactories($tables, $connection, $factoryBaseDir);
+            }
+
+            if ($this->option('with-policies')) {
+                $this->info("Generating policies...");
+                $policyBaseDir = $this->option('policy-directory') ?: $this->config->getPolicyPath();
+                $this->createDirectory($policyBaseDir);
+                
+                // Create a User policy by default
+                $this->policyGenerator->generate('User');
+                $this->info("Policy generated: UserPolicy.php");
+                
+                // Generate policies for other tables
+                foreach ($tables as $table) {
+                    if ($table->name !== 'users') {
+                        $tableName = $table->name;
+                        $modelName = Str::studly(Str::singular($tableName));
+                        $this->policyGenerator->generate($modelName);
+                        $this->info("Policy generated: {$modelName}Policy.php");
+                    }
+                }
             }
 
             $this->info('Model generation completed successfully.');
@@ -125,6 +151,13 @@ class GenerateModels extends Command
 
         $this->modelGenerator = new ModelGenerator($this->config);
         $this->factoryGenerator = new FactoryGenerator($this->config);
+        $this->policyGenerator = new PolicyGenerator(
+            app('files'),
+            __DIR__ . '/../Templates',
+            $this->config->getPolicyNamespace(),
+            $this->config->getModelNamespace(),
+            $this->option('policy-directory') ?: $this->config->getPolicyPath()
+        );
     }
 
     private function displayStartupInfo(string $connection, ?string $directory, ?string $factoryDirectory): void

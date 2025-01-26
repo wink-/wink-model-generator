@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.2.6] - 2025-01-22
+
+### Added
+- Added policy generation feature with `--with-policies` option
+- Added customizable policy namespace and output path configuration
+- Added comprehensive test coverage for policy generation
+
+## [Unreleased]
+
+### Added
+
 ## [v0.2.5] - 2025-01-22
 
 ### Fixed
@@ -108,4 +119,4 @@
 - Fixed PHPUnit deprecation warnings
 - Fixed test environment configuration
 
-[Previous version changes...] 
+[Previous version changes...]

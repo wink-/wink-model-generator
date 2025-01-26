@@ -11,8 +11,10 @@ class GeneratorConfig
     private array $excludedTables;
     private string $modelNamespace;
     private string $factoryNamespace;
+    private string $policyNamespace;
     private string $modelPath;
     private string $factoryPath;
+    private string $policyPath;
 
     public function __construct()
     {
@@ -30,8 +32,10 @@ class GeneratorConfig
 
         $this->modelNamespace = Config::get('model-generator.model_namespace', 'App\\Models\\GeneratedModels');
         $this->factoryNamespace = Config::get('model-generator.factory_namespace', 'Database\\Factories\\GeneratedFactories');
+        $this->policyNamespace = Config::get('model-generator.policy_namespace', 'App\\Policies');
         $this->modelPath = Config::get('model-generator.model_path', app_path('Models/GeneratedModels'));
         $this->factoryPath = Config::get('model-generator.factory_path', database_path('factories/GeneratedFactories'));
+        $this->policyPath = Config::get('model-generator.policy_path', app_path('Policies'));
     }
 
     public function getExcludedTables(): array
@@ -57,5 +61,15 @@ class GeneratorConfig
     public function getFactoryPath(): string
     {
         return $this->factoryPath;
+    }
+
+    public function getPolicyNamespace(): string
+    {
+        return $this->policyNamespace;
+    }
+
+    public function getPolicyPath(): string
+    {
+        return $this->policyPath;
     }
 }

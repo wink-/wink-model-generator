@@ -17,6 +17,7 @@ A powerful Laravel package that automatically generates Eloquent models from you
 - Includes validation rules based on schema
 - Handles custom database connections
 - Optional model factory generation
+- Optional policy generation with customizable namespaces
 - Connection-based directory structure for multi-database projects
 - Compatible with PHP 8.2, 8.3, and 8.4
 
@@ -48,6 +49,26 @@ Example SQLite configuration:
     'driver' => 'sqlite',
     'database' => database_path('your-database.sqlite'),
     'prefix' => '',
+```
+
+### Policy Generation
+
+You can generate Laravel policies for your models using the `--with-policies` option:
+
+```bash
+php artisan wink:generate-models --with-policies
+```
+
+Customize policy generation in your `config/model-generator.php`:
+
+```php
+return [
+    'policy_namespace' => 'App\Policies',  // Namespace for generated policies
+    'policy_path' => app_path('Policies'),  // Output directory for policy files
+];
+```
+
+Generated policies include standard CRUD methods (viewAny, view, create, update, delete) with proper type-hinting and namespacing.
     'foreign_key_constraints' => true,
 ],
 ```
