@@ -5,18 +5,26 @@ declare(strict_types=1);
 namespace Wink\ModelGenerator\Generators;
 
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\File;
 use Wink\ModelGenerator\Config\GeneratorConfig;
+use Wink\ModelGenerator\Services\FileService;
+use Wink\ModelGenerator\Exceptions\InvalidInputException;
 
 class ModelGenerator
 {
     private GeneratorConfig $config;
+    private FileService $fileService;
 
-    public function __construct(GeneratorConfig $config)
+    public function __construct(GeneratorConfig $config, FileService $fileService)
     {
         $this->config = $config;
+        $this->fileService = $fileService;
     }
 
+    /**
+     * Generate a model class with the specified configuration
+     *
+     * @throws InvalidInputException
+     */
     public function generate(
         string $modelName,
         string $tableName,
@@ -26,55 +34,153 @@ class ModelGenerator
         bool $withRelationships = false,
         bool $withRules = false
     ): string {
-        $fillable = [];
-        $properties = [];
-        $timestamps = false;
-        $relationships = [];
-        $casts = [];
-        $rules = [];
-
-        if ($withRelationships) {
-            foreach ($foreignKeys as $fk) {
-                $relationships[] = $this->generateRelationship($fk);
-            }
+        if (empty($modelName) || empty($tableName)) {
+            throw new InvalidInputException('Model name and table name are required');
         }
 
-        foreach ($columns as $column) {
-            if ($column->name === 'created_at' || $column->name === 'updated_at') {
-                $timestamps = true;
-                continue;
-            }
-            if ($column->name !== 'id') {
-                $fillable[] = "'{$column->name}'";
-                $phpType = $this->mapSqliteTypeToPhp($column->type);
-                $properties[] = " * @property {$phpType} \${$column->name}";
-            }
-
-            // Add casts for specific types
-            if (str_contains($column->type, 'json')) {
-                $casts[] = "'{$column->name}' => 'array'";
-            } elseif (str_contains($column->name, '_at')) {
-                $casts[] = "'{$column->name}' => 'datetime'";
-            }
-
-            // Generate validation rules
-            if ($withRules) {
-                $rules[] = $this->generateValidationRule($column);
-            }
-        }
-
-        return $this->generateModelContent(
-            $this->config->getModelNamespace(),
+        $template = $this->fileService->get(__DIR__ . '/../Templates/model.stub');
+        
+        $modelDefinition = $this->buildModelDefinition(
             $modelName,
             $tableName,
             $connection,
-            $timestamps ? 'true' : 'false',
-            implode(",\n        ", $fillable),
-            implode("\n", $properties),
-            implode("\n\n", $relationships),
-            implode(",\n        ", $casts),
-            implode(",\n            ", array_filter($rules))
+            $columns,
+            $foreignKeys,
+            $withRelationships,
+            $withRules
         );
+
+        return str_replace(
+            array_keys($modelDefinition),
+            array_values($modelDefinition),
+            $template
+        );
+    }
+
+    private function buildModelDefinition(
+        string $modelName,
+        string $tableName,
+        string $connection,
+        array $columns,
+        array $foreignKeys,
+        bool $withRelationships,
+        bool $withRules
+    ): array {
+        $timestamps = false;
+        $modelData = [
+            'fillable' => [],
+            'properties' => [],
+            'casts' => [],
+            'rules' => [],
+            'relationships' => []
+        ];
+
+        foreach ($columns as $column) {
+            $this->processColumn($column, $modelData, $timestamps);
+        }
+
+        if ($withRelationships) {
+            $modelData['relationships'] = $this->processRelationships($foreignKeys);
+        }
+
+        if ($withRules) {
+            $modelData['rules'] = $this->generateValidationRules($columns);
+        }
+
+        return [
+            '{{ namespace }}' => $this->config->getModelNamespace(),
+            '{{ class }}' => $modelName,
+            '{{ table }}' => $tableName,
+            '{{ connection }}' => $connection,
+            '{{ timestamps }}' => $timestamps ? 'true' : 'false',
+            '{{ fillable }}' => $this->formatArrayContent($modelData['fillable']),
+            '{{ properties }}' => implode("\n", $modelData['properties']),
+            '{{ relationships }}' => implode("\n\n", $modelData['relationships']),
+            '{{ casts }}' => $this->formatArrayContent($modelData['casts']),
+            '{{ rules }}' => $this->formatArrayContent($modelData['rules'])
+        ];
+    }
+
+    private function processColumn(object $column, array &$modelData, bool &$timestamps): void
+    {
+        if ($this->isTimestampColumn($column->name)) {
+            $timestamps = true;
+            return;
+        }
+
+        if ($column->name === 'id') {
+            return;
+        }
+
+        $modelData['fillable'][] = "'{$column->name}'";
+        $modelData['properties'][] = " * @property {$this->mapSqliteTypeToPhp($column->type)} \${$column->name}";
+
+        $this->addColumnCasts($column, $modelData['casts']);
+    }
+
+    private function isTimestampColumn(string $columnName): bool
+    {
+        return in_array($columnName, ['created_at', 'updated_at']);
+    }
+
+    private function addColumnCasts(object $column, array &$casts): void
+    {
+        if (str_contains($column->type, 'json')) {
+            $casts[] = "'{$column->name}' => 'array'";
+        } elseif (str_contains($column->name, '_at')) {
+            $casts[] = "'{$column->name}' => 'datetime'";
+        }
+    }
+
+    private function processRelationships(array $foreignKeys): array
+    {
+        return array_map(function ($foreignKey) {
+            $relatedModel = Str::studly(Str::singular($foreignKey->table));
+            return <<<EOT
+    public function {$foreignKey->to}()
+    {
+        return \$this->belongsTo(\\App\\Models\\{$relatedModel}::class, '{$foreignKey->from}');
+    }
+EOT;
+        }, $foreignKeys);
+    }
+
+    private function generateValidationRules(array $columns): array
+    {
+        return array_map(function ($column) {
+            return $this->generateValidationRule($column);
+        }, array_filter($columns, fn($col) => $col->name !== 'id'));
+    }
+
+    private function generateValidationRule(object $column): string
+    {
+        $rules = ['required'];
+
+        switch (strtolower($column->type)) {
+            case 'integer':
+            case 'bigint':
+                $rules[] = 'integer';
+                break;
+            case 'string':
+            case 'varchar':
+                $rules[] = 'string';
+                $rules[] = 'max:255';
+                break;
+            case 'text':
+                $rules[] = 'string';
+                break;
+            case 'boolean':
+                $rules[] = 'boolean';
+                break;
+            case 'date':
+                $rules[] = 'date';
+                break;
+            case 'datetime':
+                $rules[] = 'date_format:Y-m-d H:i:s';
+                break;
+        }
+
+        return "'{$column->name}' => '" . implode('|', $rules) . "'";
     }
 
     private function mapSqliteTypeToPhp(string $sqliteType): string
@@ -90,63 +196,8 @@ class ModelGenerator
         };
     }
 
-    private function generateRelationship($foreignKey): string
+    private function formatArrayContent(array $items): string
     {
-        $relatedModel = Str::studly(Str::singular($foreignKey->table));
-        return <<<EOT
-    public function {$foreignKey->to}()
-    {
-        return \$this->belongsTo(\\App\\Models\\{$relatedModel}::class, '{$foreignKey->from}');
-    }
-EOT;
-    }
-
-    private function generateValidationRule($column): string
-    {
-        $rules = [];
-        
-        if ($column->notnull) {
-            $rules[] = 'required';
-        }
-        
-        if (str_contains($column->type, 'int')) {
-            $rules[] = 'integer';
-        }
-        
-        return "'{$column->name}' => ['" . implode("', '", $rules) . "']";
-    }
-
-    private function generateModelContent(
-        string $namespace,
-        string $modelName,
-        string $tableName,
-        string $connection,
-        string $timestampsValue,
-        string $fillableString,
-        string $propertiesString,
-        string $relationshipsString,
-        string $castsString,
-        string $rulesString
-    ): string {
-        $template = File::get(__DIR__ . '/../Templates/model.stub');
-        
-        $replacements = [
-            '{{ namespace }}' => $namespace,
-            '{{ modelName }}' => $modelName,
-            '{{ tableName }}' => $tableName,
-            '{{ connection }}' => $connection,
-            '{{ timestampsValue }}' => $timestampsValue,
-            '{{ fillableString }}' => $fillableString,
-            '{{ propertiesString }}' => $propertiesString,
-            '{{ relationshipsString }}' => $relationshipsString,
-            '{{ castsString }}' => $castsString,
-            '{{ rulesString }}' => $rulesString,
-        ];
-
-        return array_reduce(
-            array_keys($replacements),
-            fn(string $content, string $key) => Str::replace($key, $replacements[$key], $content),
-            $template
-        );
+        return empty($items) ? '' : implode(",\n        ", $items);
     }
 }

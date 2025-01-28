@@ -68,12 +68,19 @@ class ModelService
     public function getClassNameFromFile(\SplFileInfo $file): ?string
     {
         $contents = file_get_contents($file->getPathname());
-        if (preg_match('/namespace\s+(.+?);/', $contents, $matches)) {
+        
+        // Extract namespace
+        $namespace = '';
+        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
             $namespace = $matches[1];
-            if (preg_match('/class\s+(\w+)/', $contents, $matches)) {
-                return $namespace . '\\' . $matches[1];
-            }
         }
+
+        // Extract class name
+        if (preg_match('/class\s+(\w+)(?:\s+extends\s+[^{]+)?(?:\s+implements\s+[^{]+)?/', $contents, $matches)) {
+            $className = $matches[1];
+            return $namespace ? $namespace . '\\' . $className : $className;
+        }
+
         return null;
     }
 

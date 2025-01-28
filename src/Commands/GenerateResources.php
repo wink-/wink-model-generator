@@ -73,13 +73,14 @@ class GenerateResources extends Command
 
             $this->info('Resource generation completed successfully.');
             return 0;
-        } catch (ModelNotFoundException|InvalidInputException $e) {
+        } catch (ModelNotFoundException $e) {
+            $this->error($e->getMessage());
+            return 1;
+        } catch (InvalidInputException $e) {
             $this->error($e->getMessage());
             return 1;
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());
-            $this->error('Stack trace:');
-            $this->error($e->getTraceAsString());
             return 1;
         }
     }
@@ -152,6 +153,8 @@ class GenerateResources extends Command
                     true
                 );
             }
+        } catch (ModelNotFoundException $e) {
+            throw $e;
         } catch (\Exception $e) {
             throw new RuntimeException(
                 "Failed to generate resource for model {$modelName}: " . $e->getMessage(),
@@ -199,8 +202,12 @@ class GenerateResources extends Command
             try {
                 $className = $this->modelService->getClassNameFromFile($file);
                 if ($className && is_subclass_of($className, \Illuminate\Database\Eloquent\Model::class)) {
+                    // Convert fully qualified class name to relative model name
+                    $modelName = str_replace('App\\Models\\', '', $className);
+                    $modelName = str_replace('\\', '/', $modelName);
+
                     $this->generateResourceForModel(
-                        $className,
+                        $modelName,
                         $generateCollection,
                         $outputDir
                     );

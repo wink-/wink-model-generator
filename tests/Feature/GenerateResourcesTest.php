@@ -64,8 +64,13 @@ MODEL;
         $composerAutoloader = require __DIR__ . '/../../vendor/autoload.php';
         $composerAutoloader->addPsr4('App\\Models\\Admin\\', $this->testModelDir);
 
-        // Configure the resource path
-        config(['model-generator.resource_path' => $this->testResourceDir]);
+        // Configure paths
+        config([
+            'model-generator.resource_path' => $this->testResourceDir,
+            'model-generator.model_path' => dirname($this->testModelDir),
+            'model-generator.model_namespace' => 'App\\Models',
+            'model-generator.resource_namespace' => 'App\\Http\\Resources'
+        ]);
 
         // Setup database
         $this->setupDatabase();
@@ -312,11 +317,32 @@ MODEL;
             '--directory' => $this->testModelDir
         ])->assertSuccessful();
 
+        // Check for Inventory resource
         $this->assertResourceExists(
             $this->testResourceDir . '/InventoryResource.php',
             [
                 'namespace App\Http\Resources;',
-                'class InventoryResource extends JsonResource'
+                'class InventoryResource extends JsonResource',
+                "'category' => new CategoryResource(\$this->whenLoaded('category'))",
+                "'items' => ItemResource::collection(\$this->whenLoaded('items'))"
+            ]
+        );
+
+        // Check for Category resource
+        $this->assertResourceExists(
+            $this->testResourceDir . '/CategoryResource.php',
+            [
+                'namespace App\Http\Resources;',
+                'class CategoryResource extends JsonResource'
+            ]
+        );
+
+        // Check for Item resource
+        $this->assertResourceExists(
+            $this->testResourceDir . '/ItemResource.php',
+            [
+                'namespace App\Http\Resources;',
+                'class ItemResource extends JsonResource'
             ]
         );
     }
@@ -347,6 +373,6 @@ MODEL;
                 '--model' => 'NonExistentModel'
             ])
             ->assertFailed()
-            ->expectsOutput('Error: Model not found: NonExistentModel');
+            ->expectsOutput('Model not found: NonExistentModel');
     }
 }

@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * {{ modelName }} Model
+ * {{ class }} Model
  *
-{{ propertiesString }}
+{{ properties }}
  */
-class {{ modelName }} extends Model
+class {{ class }} extends Model
 {
     use HasFactory;
 
@@ -22,7 +22,7 @@ class {{ modelName }} extends Model
     /**
      * The table associated with the model.
      */
-    protected $table = '{{ tableName }}';
+    protected $table = '{{ table }}';
 
     /**
      * The primary key associated with the table.
@@ -42,7 +42,7 @@ class {{ modelName }} extends Model
     /**
      * Indicates if the model should be timestamped.
      */
-    public $timestamps = {{ timestampsValue }};
+    public $timestamps = {{ timestamps }};
 
     /**
      * The storage format of the model's date columns.
@@ -51,9 +51,11 @@ class {{ modelName }} extends Model
 
     /**
      * The attributes that are mass assignable.
+     *
+     * @var array<string>
      */
     protected $fillable = [
-        {{ fillableString }}
+        {{ fillable }}
     ];
 
     /**
@@ -68,9 +70,11 @@ class {{ modelName }} extends Model
 
     /**
      * The attributes that should be cast.
+     *
+     * @var array<string, string>
      */
     protected $casts = [
-        {{ castsString }}
+        {{ casts }}
     ];
 
     /**
@@ -79,11 +83,16 @@ class {{ modelName }} extends Model
     protected $attributes = [];
 
     /**
-     * The validation rules for the model.
+     * Get the validation rules that apply to the model.
+     *
+     * @return array<string, string>
      */
-    public static $rules = [
-        {{ rulesString }}
-    ];
+    public static function rules(): array
+    {
+        return [
+            {{ rules }}
+        ];
+    }
 
-{{ relationshipsString }}
+{{ relationships }}
 }

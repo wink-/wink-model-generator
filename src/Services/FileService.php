@@ -27,16 +27,24 @@ class FileService
         File::put($path, $content);
     }
 
+    public function get(string $path): string
+    {
+        if (!File::exists($path)) {
+            throw new RuntimeException("File not found: {$path}");
+        }
+        return File::get($path);
+    }
+
     public function getPhpFiles(string $directory): array
     {
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($directory)
+            new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS)
         );
 
         $files = [];
         foreach ($iterator as $file) {
             if ($file->isFile() && $file->getExtension() === 'php') {
-                $files[] = $file;
+                $files[] = new \SplFileInfo($file->getPathname());
             }
         }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.2.8] - 2025-01-29
+
+### Added
+- New `NamespaceService` class to handle namespace operations
+
+### Changed
+- Refactored `ValidateModelNamespaces` command to use services and improve error handling
+- Moved namespace operations to dedicated `NamespaceService`
+- Fixed error message consistency in namespace validation
+
 ## [v0.2.7] - 2025-01-28
 
 ### Added
@@ -10,6 +20,7 @@
 
 ### Changed
 - Refactored `GenerateResources` command to improve maintainability
+- Refactored `ModelGenerator` for better code organization and error handling
 - Moved file operations to dedicated `FileService`
 - Moved model operations to dedicated `ModelService`
 - Improved error handling with custom exceptions
