@@ -113,7 +113,7 @@ class GenerateModels extends Command
             default => throw new RuntimeException("Unsupported database driver: {$driver}")
         };
 
-        $fileService = new FileService();
+        $fileService = app(FileService::class);
         $this->modelGenerator = new ModelGenerator($this->config, $fileService);
         $this->factoryGenerator = new FactoryGenerator($this->config);
     }
