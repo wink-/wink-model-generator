@@ -14,6 +14,7 @@ use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
 use Wink\ModelGenerator\Generators\ModelGenerator;
 use Wink\ModelGenerator\Generators\FactoryGenerator;
+use Wink\ModelGenerator\Services\FileService;
 use RuntimeException;
 
 class GenerateModels extends Command
@@ -105,25 +106,15 @@ class GenerateModels extends Command
 
     private function initializeGenerators(string $connection): void
     {
-        $config = config("database.connections.{$connection}");
-        
-        if (!$config) {
-            throw new RuntimeException("Database connection '{$connection}' not found in config/database.php");
-        }
-        
-        $driver = $config['driver'] ?? null;
-        
-        if (!$driver) {
-            throw new RuntimeException("No driver specified for connection '{$connection}'");
-        }
-        
+        $driver = config("database.connections.{$connection}.driver");
         $this->schemaReader = match ($driver) {
             'sqlite' => new SqliteSchemaReader(),
             'mysql' => new MySqlSchemaReader(),
             default => throw new RuntimeException("Unsupported database driver: {$driver}")
         };
 
-        $this->modelGenerator = new ModelGenerator($this->config);
+        $fileService = app(FileService::class);
+        $this->modelGenerator = new ModelGenerator($this->config, $fileService);
         $this->factoryGenerator = new FactoryGenerator($this->config);
     }
 

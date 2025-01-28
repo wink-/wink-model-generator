@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Fixed `ArgumentCountError` in `GenerateModels` command by properly injecting `FileService` into `ModelGenerator`
+
 ## [v0.2.8] - 2025-01-29
 
 ### Added
