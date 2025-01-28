@@ -1,5 +1,25 @@
 # Changelog
 
+## [v0.2.7] - 2025-01-28
+
+### Added
+- New `FileService` class to handle file operations
+- New `ModelService` class to handle model-related operations
+- Custom exceptions for better error handling (`ModelNotFoundException`, `InvalidInputException`)
+- Improved dependency injection in `GenerateResources` command
+
+### Changed
+- Refactored `GenerateResources` command to improve maintainability
+- Moved file operations to dedicated `FileService`
+- Moved model operations to dedicated `ModelService`
+- Improved error handling with custom exceptions
+- Enhanced test assertions for resource generation
+
+### Fixed
+- Fixed model file content corruption in resource generation
+- Improved SchemaReader initialization to properly handle SQLite databases
+- Fixed test output to be more readable and maintainable
+
 ## [v0.2.6] - 2025-01-23
 
 ### Added

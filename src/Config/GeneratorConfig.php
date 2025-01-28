@@ -13,6 +13,7 @@ class GeneratorConfig
     private string $factoryNamespace;
     private string $modelPath;
     private string $factoryPath;
+    private string $resourcePath;
 
     public function __construct()
     {
@@ -28,10 +29,11 @@ class GeneratorConfig
             'job_batches'
         ]);
 
-        $this->modelNamespace = Config::get('model-generator.model_namespace', 'App\\Models\\GeneratedModels');
-        $this->factoryNamespace = Config::get('model-generator.factory_namespace', 'Database\\Factories\\GeneratedFactories');
-        $this->modelPath = Config::get('model-generator.model_path', app_path('Models/GeneratedModels'));
-        $this->factoryPath = Config::get('model-generator.factory_path', database_path('factories/GeneratedFactories'));
+        $this->modelNamespace = Config::get('model-generator.model_namespace', 'App\\Models');
+        $this->factoryNamespace = Config::get('model-generator.factory_namespace', 'Database\\Factories');
+        $this->modelPath = Config::get('model-generator.model_path', app_path('Models'));
+        $this->factoryPath = Config::get('model-generator.factory_path', database_path('factories'));
+        $this->resourcePath = Config::get('model-generator.resource_path', app_path('Http/Resources'));
     }
 
     public function getExcludedTables(): array
@@ -57,5 +59,10 @@ class GeneratorConfig
     public function getFactoryPath(): string
     {
         return $this->factoryPath;
+    }
+
+    public function getResourcePath(): string
+    {
+        return $this->resourcePath;
     }
 }
