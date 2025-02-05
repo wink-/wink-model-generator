@@ -8,7 +8,7 @@ use Wink\ModelGenerator\Services\FileService;
 use Wink\ModelGenerator\Generators\ModelGenerator;
 use Wink\ModelGenerator\Exceptions\InvalidInputException;
 
-class GenerateModelsTest extends TestCase
+class ModelGeneratorTest extends TestCase
 {
     private ModelGenerator $generator;
     private GeneratorConfig $config;

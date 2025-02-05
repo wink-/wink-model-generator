@@ -5,7 +5,7 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/wink/wink-model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
 [![License](https://img.shields.io/packagist/l/wink/wink-model-generator.svg)](https://packagist.org/packages/wink/wink-model-generator)
 
-A powerful Laravel package that automatically generates Eloquent models from your existing database schema, supporting both MySQL and SQLite databases.
+A focused Laravel package that automatically generates Eloquent models and factories from your existing database schema. For API Resource and Controller generation, check out our companion package [wink-resource-generator](https://github.com/wink-/wink-resource-generator).
 
 ## Features
 
@@ -29,46 +29,71 @@ You can install the package via composer:
 composer require wink/wink-model-generator --dev
 ```
 
-The package will automatically register its service provider.
+## Related Packages
+
+- [wink-resource-generator](https://github.com/wink-/wink-resource-generator) - Generate API Resources, Controllers, and Routes for your Laravel models
 
 ## Configuration
 
-Publish the configuration file:
+You can publish the configuration file with:
 
 ```bash
-php artisan vendor:publish --tag="model-generator-config"
+php artisan vendor:publish --provider="Wink\ModelGenerator\ModelGeneratorServiceProvider" --tag="config"
 ```
 
-### Database Support
+This will create a `config/model-generator.php` file with the following options:
 
-The package supports both MySQL and SQLite databases. Configure your connections in `config/database.php`:
-
-#### MySQL Configuration
 ```php
-'mysql-connection' => [
-    'driver' => 'mysql',
-    'host' => env('DB_HOST', '127.0.0.1'),
-    'database' => env('DB_DATABASE'),
-    'username' => env('DB_USERNAME'),
-    'password' => env('DB_PASSWORD'),
-],
-```
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Model Namespace
+    |--------------------------------------------------------------------------
+    |
+    | This value defines the default namespace for generated model classes.
+    | You can override this on a per-model basis using the --namespace option.
+    |
+    */
+    'model_namespace' => 'App\\Models',
 
-#### SQLite Configuration
-```php
-'sqlite-connection' => [
-    'driver' => 'sqlite',
-    'database' => database_path('your-database.sqlite'),
-    'prefix' => '',
-    'foreign_key_constraints' => true,
-],
-```
+    /*
+    |--------------------------------------------------------------------------
+    | Model Output Path
+    |--------------------------------------------------------------------------
+    |
+    | This value defines the default output path for generated model files.
+    | The path should be relative to the project root.
+    |
+    */
+    'model_path' => 'app/Models',
 
-Note: For SQLite, use absolute paths and avoid using the `url` key in the connection config.
+    /*
+    |--------------------------------------------------------------------------
+    | Factory Output Path
+    |--------------------------------------------------------------------------
+    |
+    | This value defines the default output path for generated factory files.
+    | The path should be relative to the project root.
+    |
+    */
+    'factory_path' => 'database/factories',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Rules
+    |--------------------------------------------------------------------------
+    |
+    | When true, the generator will add Laravel validation rules as PHPDoc
+    | annotations based on the column types and constraints.
+    |
+    */
+    'generate_validation_rules' => true,
+];
+```
 
 ## Usage
 
-The package provides two main commands for generating models and API resources.
+The package provides two main commands for generating models and factories.
 
 ### Model Generation
 
@@ -85,20 +110,6 @@ php artisan wink:generate-models
 --with-rules              # Generate validation rules
 --with-factories          # Generate model factories
 --factory-directory=path  # Custom output directory for factories
-```
-
-### API Resource Generation
-
-Generate Laravel API Resources from your models:
-
-```bash
-# Generate resources for all models in a directory
-php artisan wink:generate-resources --directory=app/Models/Admin
-
-# Common Options
---model=path/to/model.php  # Generate for a specific model
---collection              # Generate collection resources
---output=path            # Custom output directory for resources
 ```
 
 ### Directory Structure

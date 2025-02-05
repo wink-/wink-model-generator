@@ -7,7 +7,6 @@ namespace Wink\ModelGenerator;
 use Illuminate\Support\ServiceProvider;
 use Wink\ModelGenerator\Commands\GenerateModels;
 use Wink\ModelGenerator\Commands\ValidateModelNamespaces;
-use Wink\ModelGenerator\Commands\GenerateResources;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
@@ -64,7 +63,6 @@ class ModelGeneratorServiceProvider extends ServiceProvider
             $this->commands([
                 GenerateModels::class,
                 ValidateModelNamespaces::class,
-                GenerateResources::class,
             ]);
 
             // Optional: Publish configuration

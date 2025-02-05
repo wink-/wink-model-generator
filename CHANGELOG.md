@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+- Split package functionality: Moved API Resource, Controller, and Route generation to new `wink-resource-generator` package
+- Renamed test files to follow Laravel conventions:
+  - `GenerateModelsTest.php` → `ModelGeneratorTest.php`
+  - Feature tests moved to `Commands` directory
+- Removed resource-related templates and commands
+- Focused package scope on model generation, relationships, and factories
+
 ### Fixed
 - Fixed `ArgumentCountError` in `GenerateModels` command by properly injecting `FileService` into `ModelGenerator`
 
