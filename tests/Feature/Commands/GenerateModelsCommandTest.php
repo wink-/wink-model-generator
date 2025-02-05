@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Commands;
 
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -9,7 +9,7 @@ use Wink\ModelGenerator\Services\FileService;
 use Wink\ModelGenerator\Generators\ModelGenerator;
 use Wink\ModelGenerator\Exceptions\InvalidInputException;
 
-class GenerateModelsTest extends TestCase
+class GenerateModelsCommandTest extends TestCase
 {
     protected $outputPath;
     protected $modelGenerator;
@@ -21,7 +21,7 @@ class GenerateModelsTest extends TestCase
         parent::setUp();
 
         // Set up output paths
-        $this->outputPath = __DIR__ . '/../../test-output/models';
+        $this->outputPath = __DIR__ . '/../../../test-output/models';
         
         // Create directories if they don't exist
         if (!File::isDirectory($this->outputPath)) {
