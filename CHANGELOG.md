@@ -128,6 +128,17 @@
 - Now requires Laravel 11 and PHP 8.2
 - Removed support for Laravel 10
 
+## [v0.1.5] - 2025-04-17
+
+### Added
+- GitHub Actions CI workflow for Pint, PHPStan, PHPUnit, and Infection
+- Quality Assurance section in README documenting formatting and style checks
+- Updates to TODO.md reflecting completed enhancements
+
+### Changed
+- Composer require-dev versions: spatie/laravel-package-tools ^1.0, laravel/pint ^1.22
+- .windsurfrules enhanced with PSR-12, CRLF line endings, spatie/laravel-package-tools conventions, and Windows .bat usage in testing guidelines
+
 ## [v0.1.4]
 
 ### Added
