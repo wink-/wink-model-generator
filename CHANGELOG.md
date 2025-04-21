@@ -13,6 +13,20 @@
 ### Fixed
 - Fixed `ArgumentCountError` in `GenerateModels` command by properly injecting `FileService` into `ModelGenerator`
 
+## [v0.3.0] - 2025-04-18
+
+### Added
+- GitHub Actions CI workflow for Pint, PHPStan, PHPUnit, and Infection
+- Quality Assurance section in README documenting formatting and style checks
+- Updates to TODO.md reflecting completed enhancements
+
+### Changed
+- Composer require-dev versions: spatie/laravel-package-tools ^1.0, laravel/pint ^1.22
+- `.windsurfrules` enhanced with PSR-12 rule, CRLF line endings, spatie/laravel-package-tools conventions, and Windows `.bat` usage in testing guidelines
+
+### Fixed
+- Fixed `ArgumentCountError` in `GenerateModels` command by properly injecting `FileService` into `ModelGenerator`
+
 ## [v0.2.8] - 2025-01-29
 
 ### Added
