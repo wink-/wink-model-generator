@@ -53,6 +53,11 @@ return [
     | This value defines the default namespace for generated model classes.
     | You can override this on a per-model basis using the --namespace option.
     |
+    | Note: Generated relationship methods currently assume that related models
+    | reside in the `App\Models` namespace. If you customize `model_namespace`
+    | to something else, you may need to manually adjust the namespaces in the
+    | generated relationship methods.
+    |
     */
     'model_namespace' => 'App\\Models',
 
@@ -61,8 +66,12 @@ return [
     | Model Output Path
     |--------------------------------------------------------------------------
     |
-    | This value defines the default output path for generated model files.
-    | The path should be relative to the project root.
+    | This value defines the default base path for models and is used to
+    | determine their PHP namespace (e.g., `App\Models` if `model_path` is
+    | `app/Models`). By default, models will be placed in a
+    | `GeneratedModels/{connection_name}` subdirectory within this path
+    | (e.g., `app/Models/GeneratedModels/mysql`). This final output path can be
+    | fully customized using the `--directory` command-line option.
     |
     */
     'model_path' => 'app/Models',
@@ -72,8 +81,11 @@ return [
     | Factory Output Path
     |--------------------------------------------------------------------------
     |
-    | This value defines the default output path for generated factory files.
-    | The path should be relative to the project root.
+    | This value defines the default base output path for generated factory files.
+    | By default, factories will be placed in a
+    | `GeneratedFactories/{connection_name}` subdirectory within this path
+    | (e.g., `database/factories/GeneratedFactories/mysql`). This output path
+    | can be fully customized using the `--factory-directory` command-line option.
     |
     */
     'factory_path' => 'database/factories',
@@ -83,8 +95,9 @@ return [
     | Validation Rules
     |--------------------------------------------------------------------------
     |
-    | When true, the generator will add Laravel validation rules as PHPDoc
-    | annotations based on the column types and constraints.
+    | When true, the generator will add a `public static function rules(): array`
+    | method to the model class. This method contains Laravel validation rules
+    | based on the column types and constraints.
     |
     */
     'generate_validation_rules' => true,
@@ -104,7 +117,7 @@ Generate Eloquent models from your database schema:
 php artisan wink:generate-models
 
 # Common Options
---connection=mysql          # Specify database connection (default: sqlite)
+--connection=sqlite         # Specify database connection (default: sqlite)
 --directory=path/to/models  # Custom output directory for models
 --with-relationships       # Include relationships
 --with-rules              # Generate validation rules
@@ -114,8 +127,9 @@ php artisan wink:generate-models
 
 ### Directory Structure
 
-The package organizes generated files by connection name to prevent conflicts in multi-database projects:
+By default, the package organizes generated model files into a `GeneratedModels/{connection_name}` subdirectory. This subdirectory is created within the path defined by the `model_path` configuration option (which defaults to `app/Models`, resulting in a final default path like `app/Models/GeneratedModels/mysql`). A similar structure is used for factories based on the `factory_path` configuration.
 
+The typical default directory structure looks like this:
 ```
 app/
 ├── Models/
@@ -129,19 +143,11 @@ app/
             └── sqlite/      # Factories for SQLite connection
 ```
 
-Directory options accept either full paths or paths relative to the project root. If not specified:
-- Models: `app/Models/GeneratedModels/{connection}`
-- Factories: `database/factories/GeneratedFactories/{connection}`
+The `--directory` command-line option allows you to specify a custom output directory for models, completely overriding the default `{model_path}/GeneratedModels/{connection_name}` structure. Similarly, the `--factory-directory` option overrides the default for factories. These options accept either full paths or paths relative to the project root.
 
-## Quality Assurance
-
-We follow these quality checks in CI ([GitHub Actions](.github/workflows/ci.yml)):
-
-- Code Formatting (local): run `vendor/bin/pint` to auto-format your code
-- Style Check (CI): run `vendor/bin/pint --test` to verify style compliance
-- Static Analysis: run `vendor/bin/phpstan analyse`
-- Tests: run `vendor/bin/phpunit --coverage-text`
-- Mutation Testing: run `vendor/bin/infection --min-msi=80`
+If the relevant `--directory` or `--factory-directory` options are not specified, the defaults are:
+- Models: `{model_path}/GeneratedModels/{connection_name}` (e.g., `app/Models/GeneratedModels/mysql` using the default `model_path`)
+- Factories: `{factory_path}/GeneratedFactories/{connection_name}` (e.g., `database/factories/GeneratedFactories/mysql` using the default `factory_path`)
 
 ## Contributing
 
