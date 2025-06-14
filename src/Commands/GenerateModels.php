@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 use Wink\ModelGenerator\Database\MySqlSchemaReader;
+use Wink\ModelGenerator\Database\PostgreSqlSchemaReader;
 use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
 use Wink\ModelGenerator\Generators\FactoryGenerator;
@@ -58,10 +59,11 @@ class GenerateModels extends Command
     public function handle(): int
     {
         try {
-            $connection = $this->option('connection');
-            $directory = $this->option('directory');
-            $factoryDirectory = $this->option('factory-directory');
+            $connection = (string) $this->option('connection');
+            $directory = $this->option('directory') ? (string) $this->option('directory') : null;
+            $factoryDirectory = $this->option('factory-directory') ? (string) $this->option('factory-directory') : null;
 
+            $this->validateInputs($connection, $directory, $factoryDirectory);
             $this->initializeGenerators($connection);
             $this->displayStartupInfo($connection, $directory, $factoryDirectory);
 
@@ -91,11 +93,50 @@ class GenerateModels extends Command
             $this->info('Model generation completed successfully.');
 
             return 0;
-        } catch (\Exception $e) {
-            $this->error('Error: '.$e->getMessage());
-            $this->error('Stack trace: '.$e->getTraceAsString());
+        } catch (\InvalidArgumentException $e) {
+            $this->error('Invalid argument: '.$e->getMessage());
 
             return 1;
+        } catch (RuntimeException $e) {
+            $this->error('Runtime error: '.$e->getMessage());
+
+            return 1;
+        } catch (\PDOException $e) {
+            $this->error('Database connection failed: '.$e->getMessage());
+            $this->error('Please check your database configuration.');
+
+            return 1;
+        } catch (\Exception $e) {
+            $this->error('Unexpected error: '.$e->getMessage());
+            if ($this->option('verbose')) {
+                $this->error('Stack trace: '.$e->getTraceAsString());
+            }
+
+            return 1;
+        }
+    }
+
+    private function validateInputs(string $connection, ?string $directory, ?string $factoryDirectory): void
+    {
+        // Validate connection exists
+        $connections = config('database.connections');
+        if (! isset($connections[$connection])) {
+            throw new \InvalidArgumentException("Database connection '{$connection}' is not configured.");
+        }
+
+        // Validate driver is supported
+        $driver = config("database.connections.{$connection}.driver");
+        if (! in_array($driver, ['sqlite', 'mysql', 'pgsql'])) {
+            throw new \InvalidArgumentException("Database driver '{$driver}' is not supported. Supported drivers: sqlite, mysql, pgsql");
+        }
+
+        // Validate directories are writable
+        if ($directory && ! is_writable(dirname($directory))) {
+            throw new \InvalidArgumentException("Directory '{$directory}' is not writable.");
+        }
+
+        if ($factoryDirectory && ! is_writable(dirname($factoryDirectory))) {
+            throw new \InvalidArgumentException("Factory directory '{$factoryDirectory}' is not writable.");
         }
     }
 
@@ -115,6 +156,7 @@ class GenerateModels extends Command
         $this->schemaReader = match ($driver) {
             'sqlite' => new SqliteSchemaReader,
             'mysql' => new MySqlSchemaReader,
+            'pgsql' => new PostgreSqlSchemaReader,
             default => throw new RuntimeException("Unsupported database driver: {$driver}")
         };
 

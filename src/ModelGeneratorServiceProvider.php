@@ -10,6 +10,7 @@ use Wink\ModelGenerator\Commands\GenerateModels;
 use Wink\ModelGenerator\Commands\ValidateModelNamespaces;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 use Wink\ModelGenerator\Database\MySqlSchemaReader;
+use Wink\ModelGenerator\Database\PostgreSqlSchemaReader;
 use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
 use Wink\ModelGenerator\Services\FileService;
@@ -25,9 +26,7 @@ class ModelGeneratorServiceProvider extends PackageServiceProvider
             ->hasCommands([
                 GenerateModels::class,
                 ValidateModelNamespaces::class,
-            ])
-            ->hasStub('model.stub', stubName: 'model')
-            ->hasStub('factory.stub', stubName: 'factory');
+            ]);
     }
 
     public function boot(): void
@@ -46,6 +45,7 @@ class ModelGeneratorServiceProvider extends PackageServiceProvider
             return match ($driver) {
                 'sqlite' => new SqliteSchemaReader,
                 'mysql' => new MySqlSchemaReader,
+                'pgsql' => new PostgreSqlSchemaReader,
                 default => throw new \RuntimeException("Unsupported database driver: {$driver}")
             };
         });

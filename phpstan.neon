@@ -6,7 +6,7 @@ parameters:
     paths:
         - src
         - tests
-    excludes_analyse:
+    excludePaths:
         - vendor
         - storage
         - stubs
