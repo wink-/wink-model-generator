@@ -11,7 +11,7 @@ class FileService
 {
     public function prepareOutputDirectory(string $directory): void
     {
-        if (!File::isDirectory($directory)) {
+        if (! File::isDirectory($directory)) {
             File::makeDirectory($directory, 0755, true);
         }
         File::cleanDirectory($directory);
@@ -29,9 +29,10 @@ class FileService
 
     public function get(string $path): string
     {
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             throw new RuntimeException("File not found: {$path}");
         }
+
         return File::get($path);
     }
 

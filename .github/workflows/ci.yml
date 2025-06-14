@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: [8.3]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, xml, json, zip
+          coverage: xdebug
+      - name: Validate composer.json
+        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+      - name: Run Pint
+        run: vendor/bin/pint --test
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --coverage-text
+      - name: Run Infection
+        run: vendor/bin/infection --min-msi=80

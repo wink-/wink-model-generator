@@ -6,12 +6,13 @@ namespace Wink\ModelGenerator\Models\Generators;
 
 use Illuminate\Support\Str;
 use Wink\ModelGenerator\Config\GeneratorConfig;
-use Wink\ModelGenerator\Services\FileService;
 use Wink\ModelGenerator\Exceptions\InvalidInputException;
+use Wink\ModelGenerator\Services\FileService;
 
 class ModelGenerator
 {
     private GeneratorConfig $config;
+
     private FileService $fileService;
 
     public function __construct(GeneratorConfig $config, FileService $fileService)
@@ -39,7 +40,7 @@ class ModelGenerator
         }
 
         $template = $this->getStub();
-        
+
         $modelDefinition = $this->buildModelDefinition(
             $modelName,
             $tableName,
@@ -59,7 +60,7 @@ class ModelGenerator
 
     private function getStub(): string
     {
-        return $this->fileService->get(__DIR__ . '/../Templates/model.stub');
+        return $this->fileService->get(__DIR__.'/../Templates/model.stub');
     }
 
     private function buildModelDefinition(
@@ -77,7 +78,7 @@ class ModelGenerator
             'properties' => [],
             'casts' => [],
             'rules' => [],
-            'relationships' => []
+            'relationships' => [],
         ];
 
         foreach ($columns as $column) {
@@ -102,7 +103,7 @@ class ModelGenerator
             '{{ properties }}' => implode("\n", $modelData['properties']),
             '{{ relationships }}' => implode("\n\n", $modelData['relationships']),
             '{{ casts }}' => $this->formatArrayContent($modelData['casts']),
-            '{{ rules }}' => $this->formatArrayContent($modelData['rules'])
+            '{{ rules }}' => $this->formatArrayContent($modelData['rules']),
         ];
     }
 
@@ -110,6 +111,7 @@ class ModelGenerator
     {
         if ($this->isTimestampColumn($column->name)) {
             $timestamps = true;
+
             return;
         }
 
@@ -141,6 +143,7 @@ class ModelGenerator
     {
         return array_map(function ($foreignKey) {
             $relatedModel = Str::studly(Str::singular($foreignKey->table));
+
             return <<<EOT
     public function {$foreignKey->to}()
     {
@@ -154,7 +157,7 @@ EOT;
     {
         return array_map(function ($column) {
             return $this->generateValidationRule($column);
-        }, array_filter($columns, fn($col) => $col->name !== 'id'));
+        }, array_filter($columns, fn ($col) => $col->name !== 'id'));
     }
 
     private function generateValidationRule(object $column): string
@@ -185,7 +188,7 @@ EOT;
                 break;
         }
 
-        return "'{$column->name}' => '" . implode('|', $rules) . "'";
+        return "'{$column->name}' => '".implode('|', $rules)."'";
     }
 
     private function mapSqliteTypeToPhp(string $sqliteType): string

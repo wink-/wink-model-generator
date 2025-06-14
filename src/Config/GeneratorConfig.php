@@ -9,10 +9,15 @@ use Illuminate\Support\Facades\Config;
 class GeneratorConfig
 {
     private array $excludedTables;
+
     private string $modelNamespace;
+
     private string $factoryNamespace;
+
     private string $modelPath;
+
     private string $factoryPath;
+
     private string $resourcePath;
 
     public function __construct()
@@ -26,7 +31,7 @@ class GeneratorConfig
             'cache',
             'jobs',
             'cache_locks',
-            'job_batches'
+            'job_batches',
         ]);
 
         $this->modelNamespace = Config::get('model-generator.model_namespace', 'App\\Models');

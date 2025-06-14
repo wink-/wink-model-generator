@@ -9,7 +9,7 @@ A focused Laravel package that automatically generates Eloquent models and facto
 
 ## Features
 
-- Supports both MySQL and SQLite databases (including in-memory SQLite for testing)
+- Supports MySQL and SQLite databases (including in-memory SQLite for testing)
 - Generates complete model files with proper namespacing
 - Auto-detects relationships from foreign keys
 - Configurable model generation options
@@ -19,7 +19,7 @@ A focused Laravel package that automatically generates Eloquent models and facto
 - Optional model factory generation
 - Connection-based directory structure for multi-database projects
 - PSR-4 namespace validation and auto-correction
-- Compatible with PHP 8.2, 8.3, and 8.4
+- Compatible with PHP 8.3+ and Laravel 11+
 
 ## Installation
 
@@ -132,6 +132,16 @@ app/
 Directory options accept either full paths or paths relative to the project root. If not specified:
 - Models: `app/Models/GeneratedModels/{connection}`
 - Factories: `database/factories/GeneratedFactories/{connection}`
+
+## Quality Assurance
+
+We follow these quality checks in CI ([GitHub Actions](.github/workflows/ci.yml)):
+
+- Code Formatting (local): run `vendor/bin/pint` to auto-format your code
+- Style Check (CI): run `vendor/bin/pint --test` to verify style compliance
+- Static Analysis: run `vendor/bin/phpstan analyse`
+- Tests: run `vendor/bin/phpunit --coverage-text`
+- Mutation Testing: run `vendor/bin/infection --min-msi=80`
 
 ## Contributing
 

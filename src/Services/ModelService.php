@@ -7,7 +7,6 @@ namespace Wink\ModelGenerator\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use ReflectionClass;
-use RuntimeException;
 use Wink\ModelGenerator\Exceptions\ModelNotFoundException;
 
 class ModelService
@@ -16,7 +15,7 @@ class ModelService
     {
         $fullClassName = $this->parseModelName($modelName);
 
-        if (!class_exists($fullClassName)) {
+        if (! class_exists($fullClassName)) {
             throw new ModelNotFoundException("Model not found: {$modelName}");
         }
 
@@ -25,7 +24,7 @@ class ModelService
 
     public function createModelInstance(string $modelClass): Model
     {
-        return new $modelClass();
+        return new $modelClass;
     }
 
     public function getModelInfo(Model $model): array
@@ -57,9 +56,9 @@ class ModelService
     private function parseModelName(string $modelName): string
     {
         $model = str_replace('/', '\\', trim($modelName, '/'));
-        
-        if (!Str::startsWith($model, '\\')) {
-            $model = '\\App\\Models\\' . $model;
+
+        if (! Str::startsWith($model, '\\')) {
+            $model = '\\App\\Models\\'.$model;
         }
 
         return ltrim($model, '\\');
@@ -68,7 +67,7 @@ class ModelService
     public function getClassNameFromFile(\SplFileInfo $file): ?string
     {
         $contents = file_get_contents($file->getPathname());
-        
+
         // Extract namespace
         $namespace = '';
         if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
@@ -78,7 +77,8 @@ class ModelService
         // Extract class name
         if (preg_match('/class\s+(\w+)(?:\s+extends\s+[^{]+)?(?:\s+implements\s+[^{]+)?/', $contents, $matches)) {
             $className = $matches[1];
-            return $namespace ? $namespace . '\\' . $className : $className;
+
+            return $namespace ? $namespace.'\\'.$className : $className;
         }
 
         return null;
@@ -86,12 +86,13 @@ class ModelService
 
     private function isRelationshipMethod(\ReflectionMethod $method, Model $model): bool
     {
-        if (!$method->isPublic() || $method->isStatic()) {
+        if (! $method->isPublic() || $method->isStatic()) {
             return false;
         }
 
         try {
             $return = $method->invoke($model);
+
             return $return instanceof \Illuminate\Database\Eloquent\Relations\Relation;
         } catch (\Throwable $e) {
             return false;
@@ -102,12 +103,14 @@ class ModelService
     {
         $return = $method->invoke($model);
         $type = class_basename(get_class($return));
+
         return strtolower($type);
     }
 
     private function getRelatedModel(\ReflectionMethod $method, Model $model): string
     {
         $return = $method->invoke($model);
+
         return get_class($return->getRelated());
     }
 }

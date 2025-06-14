@@ -2,16 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+- PostgreSQL schema reader implementation (PostgreSqlSchemaReader)
+- Enhanced CI/CD workflow with automated testing
+- Improved documentation with usage examples and troubleshooting guides
+
 ### Changed
-- Split package functionality: Moved API Resource, Controller, and Route generation to new `wink-resource-generator` package
-- Renamed test files to follow Laravel conventions:
-  - `GenerateModelsTest.php` → `ModelGeneratorTest.php`
-  - Feature tests moved to `Commands` directory
-- Removed resource-related templates and commands
-- Focused package scope on model generation, relationships, and factories
+- Updated minimum PHP requirement to 8.3+
+- Updated minimum Laravel requirement to 11+
+- Improved code quality with enhanced static analysis and mutation testing
+- Enhanced test coverage across all supported database drivers
 
 ### Fixed
-- Fixed `ArgumentCountError` in `GenerateModels` command by properly injecting `FileService` into `ModelGenerator`
+- Improved database connection handling for edge cases
+- Enhanced error reporting and validation
 
 ## [v0.3.0] - 2025-04-18
 
@@ -21,6 +25,12 @@
 - Updates to TODO.md reflecting completed enhancements
 
 ### Changed
+- Split package functionality: Moved API Resource, Controller, and Route generation to new `wink-resource-generator` package
+- Renamed test files to follow Laravel conventions:
+  - `GenerateModelsTest.php` → `ModelGeneratorTest.php`
+  - Feature tests moved to `Commands` directory
+- Removed resource-related templates and commands
+- Focused package scope on model generation, relationships, and factories
 - Composer require-dev versions: spatie/laravel-package-tools ^1.0, laravel/pint ^1.22
 - `.windsurfrules` enhanced with PSR-12 rule, CRLF line endings, spatie/laravel-package-tools conventions, and Windows `.bat` usage in testing guidelines
 

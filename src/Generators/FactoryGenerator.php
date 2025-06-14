@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Wink\ModelGenerator\Generators;
 
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 
 class FactoryGenerator
@@ -24,15 +24,15 @@ class FactoryGenerator
             if ($column->name === 'id' || $column->name === 'created_at' || $column->name === 'updated_at') {
                 continue;
             }
-            
+
             $faker = $this->getFakerMethod($column);
             $definitions[] = "            '{$column->name}' => fake()->{$faker}";
         }
-        
+
         $definitionsString = implode(",\n", $definitions);
-        
-        $template = File::get(__DIR__ . '/../Templates/factory.stub');
-        
+
+        $template = File::get(__DIR__.'/../Templates/factory.stub');
+
         $replacements = [
             '{{ namespace }}' => $this->config->getFactoryNamespace(),
             '{{ modelNamespace }}' => $this->config->getModelNamespace(),
@@ -42,7 +42,7 @@ class FactoryGenerator
 
         return array_reduce(
             array_keys($replacements),
-            fn(string $content, string $key) => Str::replace($key, $replacements[$key], $content),
+            fn (string $content, string $key) => Str::replace($key, $replacements[$key], $content),
             $template
         );
     }
@@ -53,20 +53,42 @@ class FactoryGenerator
         $type = strtolower($column->type);
 
         // Common column name patterns
-        if (str_contains($name, 'email')) return 'safeEmail()';
-        if (str_contains($name, 'name')) return 'name()';
-        if (str_contains($name, 'phone')) return 'phoneNumber()';
-        if (str_contains($name, 'address')) return 'address()';
-        if (str_contains($name, 'city')) return 'city()';
-        if (str_contains($name, 'country')) return 'country()';
-        if (str_contains($name, 'zip')) return 'postcode()';
-        if (str_contains($name, 'password')) return 'password()';
-        if (str_contains($name, 'url')) return 'url()';
-        if (str_contains($name, 'description')) return 'text()';
-        if (str_contains($name, 'title')) return 'sentence()';
+        if (str_contains($name, 'email')) {
+            return 'safeEmail()';
+        }
+        if (str_contains($name, 'name')) {
+            return 'name()';
+        }
+        if (str_contains($name, 'phone')) {
+            return 'phoneNumber()';
+        }
+        if (str_contains($name, 'address')) {
+            return 'address()';
+        }
+        if (str_contains($name, 'city')) {
+            return 'city()';
+        }
+        if (str_contains($name, 'country')) {
+            return 'country()';
+        }
+        if (str_contains($name, 'zip')) {
+            return 'postcode()';
+        }
+        if (str_contains($name, 'password')) {
+            return 'password()';
+        }
+        if (str_contains($name, 'url')) {
+            return 'url()';
+        }
+        if (str_contains($name, 'description')) {
+            return 'text()';
+        }
+        if (str_contains($name, 'title')) {
+            return 'sentence()';
+        }
 
         // Data types
-        return match($type) {
+        return match ($type) {
             'int', 'integer', 'bigint', 'smallint', 'tinyint' => 'randomNumber()',
             'decimal', 'float', 'double' => 'randomFloat()',
             'boolean', 'bool' => 'boolean()',

@@ -22,6 +22,7 @@ class NamespaceService
         if (preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
             return $matches[1];
         }
+
         return null;
     }
 
@@ -32,7 +33,7 @@ class NamespaceService
         $basePath = str_replace('\\', '/', base_path());
 
         // Remove base path to get relative path
-        $relativePath = Str::after($filePath, $basePath . '/');
+        $relativePath = Str::after($filePath, $basePath.'/');
 
         // Handle common Laravel paths
         if (Str::startsWith($relativePath, 'app/')) {
@@ -49,7 +50,7 @@ class NamespaceService
         // Convert directory separators to namespace separators
         if ($directory !== '.') {
             $namespaceAddition = str_replace('/', '\\', $directory);
-            $namespace .= '\\' . $namespaceAddition;
+            $namespace .= '\\'.$namespaceAddition;
         }
 
         return $namespace;
@@ -60,12 +61,12 @@ class NamespaceService
         $content = $this->fileService->get($filePath);
 
         // Create backup
-        $this->fileService->writeFile($filePath . '.bak', $content);
+        $this->fileService->writeFile($filePath.'.bak', $content);
 
         // Replace namespace
         $newContent = preg_replace(
-            '/namespace\s+' . preg_quote($currentNamespace) . ';/',
-            'namespace ' . $correctNamespace . ';',
+            '/namespace\s+'.preg_quote($currentNamespace).';/',
+            'namespace '.$correctNamespace.';',
             $content
         );
 

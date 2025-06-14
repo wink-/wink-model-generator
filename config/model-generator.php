@@ -30,6 +30,6 @@ return [
         'cache',
         'jobs',
         'cache_locks',
-        'job_batches'
+        'job_batches',
     ],
 ];

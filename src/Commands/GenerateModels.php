@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace Wink\ModelGenerator\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Wink\ModelGenerator\Config\GeneratorConfig;
 use Wink\ModelGenerator\Database\MySqlSchemaReader;
 use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
-use Wink\ModelGenerator\Generators\ModelGenerator;
 use Wink\ModelGenerator\Generators\FactoryGenerator;
+use Wink\ModelGenerator\Generators\ModelGenerator;
 use Wink\ModelGenerator\Services\FileService;
-use RuntimeException;
 
 class GenerateModels extends Command
 {
@@ -40,8 +39,11 @@ class GenerateModels extends Command
     protected $description = 'Generate Eloquent models from your database schema';
 
     private GeneratorConfig $config;
+
     private SchemaReader $schemaReader;
+
     private ModelGenerator $modelGenerator;
+
     private FactoryGenerator $factoryGenerator;
 
     public function __construct(GeneratorConfig $config)
@@ -59,10 +61,10 @@ class GenerateModels extends Command
             $connection = $this->option('connection');
             $directory = $this->option('directory');
             $factoryDirectory = $this->option('factory-directory');
-            
+
             $this->initializeGenerators($connection);
             $this->displayStartupInfo($connection, $directory, $factoryDirectory);
-            
+
             // Use the provided directory path or create one based on connection name
             $baseDir = $directory ?: $this->getDefaultDirectory($connection);
             $this->createDirectory($baseDir);
@@ -72,6 +74,7 @@ class GenerateModels extends Command
 
             if (empty($tables)) {
                 $this->error('No tables found in database.');
+
                 return 1;
             }
 
@@ -79,37 +82,39 @@ class GenerateModels extends Command
             $this->generateModels($tables, $connection, $baseDir);
 
             if ($this->option('with-factories')) {
-                $this->info("Generating factories...");
+                $this->info('Generating factories...');
                 $factoryBaseDir = $factoryDirectory ?: $this->getDefaultFactoryDirectory($connection);
                 $this->createDirectory($factoryBaseDir);
                 $this->generateFactories($tables, $connection, $factoryBaseDir);
             }
 
             $this->info('Model generation completed successfully.');
+
             return 0;
         } catch (\Exception $e) {
-            $this->error("Error: " . $e->getMessage());
-            $this->error("Stack trace: " . $e->getTraceAsString());
+            $this->error('Error: '.$e->getMessage());
+            $this->error('Stack trace: '.$e->getTraceAsString());
+
             return 1;
         }
     }
 
     private function getDefaultDirectory(string $connection): string
     {
-        return app_path('Models/GeneratedModels/' . $connection);
+        return app_path('Models/GeneratedModels/'.$connection);
     }
 
     private function getDefaultFactoryDirectory(string $connection): string
     {
-        return database_path('factories/GeneratedFactories/' . $connection);
+        return database_path('factories/GeneratedFactories/'.$connection);
     }
 
     private function initializeGenerators(string $connection): void
     {
         $driver = config("database.connections.{$connection}.driver");
         $this->schemaReader = match ($driver) {
-            'sqlite' => new SqliteSchemaReader(),
-            'mysql' => new MySqlSchemaReader(),
+            'sqlite' => new SqliteSchemaReader,
+            'mysql' => new MySqlSchemaReader,
             default => throw new RuntimeException("Unsupported database driver: {$driver}")
         };
 
@@ -122,18 +127,18 @@ class GenerateModels extends Command
     {
         $this->info('Starting model generation with:');
         $this->info("Connection: $connection");
-        $this->info("Directory: " . ($directory ?: $this->getDefaultDirectory($connection)));
+        $this->info('Directory: '.($directory ?: $this->getDefaultDirectory($connection)));
         if ($this->option('with-factories')) {
-            $this->info("Factory Directory: " . ($factoryDirectory ?: $this->getDefaultFactoryDirectory($connection)));
+            $this->info('Factory Directory: '.($factoryDirectory ?: $this->getDefaultFactoryDirectory($connection)));
         }
-        $this->info("With Relationships: " . ($this->option('with-relationships') ? 'yes' : 'no'));
-        $this->info("With Factories: " . ($this->option('with-factories') ? 'yes' : 'no'));
-        $this->info("With Rules: " . ($this->option('with-rules') ? 'yes' : 'no'));
+        $this->info('With Relationships: '.($this->option('with-relationships') ? 'yes' : 'no'));
+        $this->info('With Factories: '.($this->option('with-factories') ? 'yes' : 'no'));
+        $this->info('With Rules: '.($this->option('with-rules') ? 'yes' : 'no'));
     }
 
     private function createDirectory(string $path): void
     {
-        if (!File::isDirectory($path)) {
+        if (! File::isDirectory($path)) {
             File::makeDirectory($path, 0755, true);
         }
     }
@@ -143,16 +148,16 @@ class GenerateModels extends Command
         foreach ($tables as $table) {
             $tableName = $table->name;
             $modelName = Str::studly(Str::singular($tableName));
-            
+
             $this->info("Processing table: $tableName -> $modelName");
-            
+
             $columns = $this->schemaReader->getTableColumns($connection, $tableName);
-            $this->info("Found " . count($columns) . " columns");
+            $this->info('Found '.count($columns).' columns');
 
             $foreignKeys = [];
             if ($this->option('with-relationships')) {
                 $foreignKeys = $this->schemaReader->getForeignKeys($connection, $tableName);
-                $this->info("Found " . count($foreignKeys) . " relationships");
+                $this->info('Found '.count($foreignKeys).' relationships');
             }
 
             $modelContent = $this->modelGenerator->generate(
@@ -165,7 +170,7 @@ class GenerateModels extends Command
                 $this->option('with-rules')
             );
 
-            $modelPath = $baseDir . '/' . $modelName . '.php';
+            $modelPath = $baseDir.'/'.$modelName.'.php';
             File::put($modelPath, $modelContent);
             $this->info("Model file created: $modelPath");
         }
@@ -176,11 +181,11 @@ class GenerateModels extends Command
         foreach ($tables as $table) {
             $tableName = $table->name;
             $modelName = Str::studly(Str::singular($tableName));
-            
+
             $columns = $this->schemaReader->getTableColumns($connection, $tableName);
             $factoryContent = $this->factoryGenerator->generate($modelName, $columns);
 
-            $factoryPath = $baseDir . '/' . $modelName . 'Factory.php';
+            $factoryPath = $baseDir.'/'.$modelName.'Factory.php';
             File::put($factoryPath, $factoryContent);
             $this->info("Factory {$modelName}Factory created at {$factoryPath}");
         }

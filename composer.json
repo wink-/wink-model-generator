@@ -22,15 +22,20 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "illuminate/support": "^11.0",
         "illuminate/console": "^11.0",
-        "illuminate/database": "^11.0"
+        "illuminate/database": "^11.0",
+        "spatie/laravel-package-tools": "^1.0"
     },
     "require-dev": {
+        "infection/infection": "^0.27",
+        "laravel/pint": "^1.22",
+        "mockery/mockery": "^1.6",
+        "monolog/monolog": "^3.0",
         "orchestra/testbench": "^9.0",
-        "phpunit/phpunit": "^10.5",
-        "mockery/mockery": "^1.6"
+        "phpstan/phpstan": "^1.0",
+        "phpunit/phpunit": "^10.5"
     },
     "autoload": {
         "psr-4": {
@@ -50,7 +55,10 @@
         }
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "infection/extension-installer": true
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
