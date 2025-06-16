@@ -39,10 +39,19 @@ class MySqlSchemaReaderTest extends TestCase
     {
         parent::setUp();
 
+        // Skip MySQL tests if MySQL connection is not available
+        try {
+            $pdo = new PDO('mysql:host=127.0.0.1;port=3306', 'root', 'root', [
+                PDO::ATTR_TIMEOUT => 2,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            ]);
+        } catch (\PDOException $e) {
+            $this->markTestSkipped('MySQL server is not available: ' . $e->getMessage());
+        }
+
         $this->reader = new MySqlSchemaReader();
 
         // Create database if it doesn't exist
-        $pdo = new PDO('mysql:host=127.0.0.1;port=3306', 'root', 'root');
         $pdo->exec('DROP DATABASE IF EXISTS model_generator_test');
         $pdo->exec('CREATE DATABASE model_generator_test');
 
