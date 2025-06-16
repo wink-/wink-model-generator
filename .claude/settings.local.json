@@ -12,7 +12,8 @@
       "Bash(php:*)",
       "Bash(apt list:*)",
       "Bash(docker:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }
