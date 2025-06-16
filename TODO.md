@@ -16,8 +16,17 @@
 - [x] Add support for custom model stubs
 - [x] Split resource generation into separate package
 - [x] Package split completed - focused on model generation
+- [x] **Enhanced Model Property Generation** - Comprehensive Laravel model properties with smart detection
+- [x] **Auto-detect primary keys** - Smart primary key detection from schema instead of hardcoding 'id'
+- [x] **Auto-detect key types** - Automatically set `$keyType` based on column type (string for UUIDs, int for integers)
+- [x] **Auto-detect incrementing** - Set `$incrementing = false` for UUID/string primary keys
+- [x] **Soft deletes detection** - Auto-detect `deleted_at` columns and add SoftDeletes trait
+- [x] **Enhanced security features** - Automatically hide sensitive fields (passwords, tokens, etc.)
+- [x] **Flexible mass assignment** - Choose between `$fillable` and `$guarded` approaches
+- [x] **Complete property support** - Generate `$hidden`, `$visible`, `$attributes`, `$with`, `$perPage`, etc.
+- [x] **Advanced configuration** - Comprehensive config file with detailed model property options
+- [x] **Educational benefits** - Config file teaches developers about available Laravel model properties
 - [ ] Add PostgreSQL support
-- [ ] Add support for soft deletes detection (PostgrSQL support first)
 - [ ] Add option to generate model observers
 - [ ] Add support for database views
 - [ ] Add option to generate model interfaces

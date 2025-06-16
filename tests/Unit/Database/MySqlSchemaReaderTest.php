@@ -26,7 +26,7 @@ class MySqlSchemaReaderTest extends TestCase
             'port' => '3306',
             'database' => 'model_generator_test',
             'username' => 'root',
-            'password' => '',
+            'password' => 'root',
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
@@ -42,7 +42,7 @@ class MySqlSchemaReaderTest extends TestCase
         $this->reader = new MySqlSchemaReader();
 
         // Create database if it doesn't exist
-        $pdo = new PDO('mysql:host=127.0.0.1;port=3306', 'root', '');
+        $pdo = new PDO('mysql:host=127.0.0.1;port=3306', 'root', 'root');
         $pdo->exec('DROP DATABASE IF EXISTS model_generator_test');
         $pdo->exec('CREATE DATABASE model_generator_test');
 

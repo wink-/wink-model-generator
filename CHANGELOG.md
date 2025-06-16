@@ -3,11 +3,21 @@
 ## [Unreleased]
 
 ### Added
+- **Comprehensive Laravel Model Property Generation**: Major enhancement with extensive configuration options
+- **Smart Property Detection**: Auto-detects primary keys, key types, incrementing behavior, and soft deletes from schema
+- **Enhanced Security Features**: Automatically hides sensitive fields (passwords, tokens, etc.) with configurable patterns
+- **Flexible Mass Assignment**: Choose between `$fillable` and `$guarded` approaches with smart exclusions
+- **Complete Model Property Support**: Generates `$hidden`, `$visible`, `$attributes`, `$with`, `$perPage`, `$dateFormat`, etc.
+- **Advanced Configuration Options**: Comprehensive config file with detailed model property generation settings
+- **Educational Benefits**: Config file teaches developers about available Laravel model properties and options
 - PostgreSQL schema reader implementation (PostgreSqlSchemaReader)
 - Enhanced CI/CD workflow with automated testing
 - Improved documentation with usage examples and troubleshooting guides
 
 ### Changed
+- **Enhanced Model Template**: Updated model stub to support all new configurable properties
+- **Improved Model Generator**: Complete rewrite of property generation logic with smart detection algorithms
+- **Backward Compatibility**: Maintains compatibility with existing template format while adding new features
 - Updated minimum PHP requirement to 8.3+
 - Updated minimum Laravel requirement to 11+
 - Improved code quality with enhanced static analysis and mutation testing

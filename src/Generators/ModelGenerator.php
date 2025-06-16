@@ -39,7 +39,7 @@ class ModelGenerator
             throw new InvalidInputException('Model name and table name are required');
         }
 
-        $template = $this->fileService->get(__DIR__.'/../Templates/model.stub');
+        $template = $this->fileService->get(__DIR__.'/../../stubs/model.stub');
 
         $modelDefinition = $this->buildModelDefinition(
             $modelName,
@@ -97,13 +97,39 @@ class ModelGenerator
             $modelData['rules'] = $this->generateValidationRules($columns);
         }
 
+        // Detect primary key
+        $primaryKey = $this->detectPrimaryKey($columns);
+        $keyType = $this->detectKeyType($columns, $primaryKey);
+        $incrementing = $this->detectIncrementing($columns, $primaryKey);
+
+        // Generate model properties based on config
+        $hiddenFields = $this->generateHiddenFields($columns);
+        $visibleFields = $this->generateVisibleFields($columns);
+        $guardedFields = $this->generateGuardedFields($columns);
+        $defaultAttributes = $this->generateDefaultAttributes($columns);
+        $softDeletes = $this->detectSoftDeletes($columns);
+
         return [
             '{{ namespace }}' => $namespace,
             '{{ class }}' => $modelName,
             '{{ table }}' => $tableName,
             '{{ connection }}' => $connection,
+            '{{ primary_key }}' => $primaryKey,
+            '{{ key_type }}' => $keyType,
+            '{{ incrementing }}' => $incrementing ? 'true' : 'false',
             '{{ timestamps }}' => $timestamps ? 'true' : 'false',
-            '{{ fillable }}' => $this->formatArrayContent($modelData['fillable']),
+            '{{ date_format }}' => $this->config->getModelProperty('date_format', 'Y-m-d H:i:s'),
+            '{{ per_page_property }}' => $this->generatePerPageProperty(),
+            '{{ fillable_or_guarded }}' => $this->generateFillableOrGuarded($modelData['fillable'], $guardedFields),
+            '{{ fillable }}' => $this->formatArrayContent($modelData['fillable']), // Backward compatibility
+            '{{ hidden_property }}' => $this->generateArrayProperty('hidden', $hiddenFields),
+            '{{ visible_property }}' => $this->generateArrayProperty('visible', $visibleFields),
+            '{{ default_attributes }}' => $this->generateArrayProperty('attributes', $defaultAttributes),
+            '{{ with_property }}' => $this->generateWithProperty(),
+            '{{ appends_property }}' => $this->generateAppendsProperty(),
+            '{{ touches_property }}' => $this->generateTouchesProperty(),
+            '{{ soft_delete_import }}' => $softDeletes ? 'use Illuminate\Database\Eloquent\SoftDeletes;' : '',
+            '{{ soft_delete_trait }}' => $softDeletes ? 'use SoftDeletes;' : '',
             '{{ properties }}' => implode("\n", $modelData['properties']),
             '{{ relationships }}' => implode("\n\n", $modelData['relationships']),
             '{{ casts }}' => $this->formatArrayContent($modelData['casts']),
@@ -306,5 +332,220 @@ EOT;
     private function formatArrayContent(array $items): string
     {
         return empty($items) ? '' : implode(",\n        ", $items);
+    }
+
+    private function detectPrimaryKey(array $columns): string
+    {
+        if (! $this->config->getModelProperty('auto_detect_primary_key', true)) {
+            return 'id';
+        }
+
+        foreach ($columns as $column) {
+            if (isset($column->primary) && $column->primary) {
+                return $column->name;
+            }
+            // SQLite uses pk field
+            if (isset($column->pk) && $column->pk) {
+                return $column->name;
+            }
+        }
+
+        return 'id';
+    }
+
+    private function detectKeyType(array $columns, string $primaryKey): string
+    {
+        foreach ($columns as $column) {
+            if ($column->name === $primaryKey) {
+                $dbType = strtolower($column->type);
+                if (in_array($dbType, ['varchar', 'char', 'string', 'uuid'])) {
+                    return 'string';
+                }
+
+                return 'int';
+            }
+        }
+
+        return 'int';
+    }
+
+    private function detectIncrementing(array $columns, string $primaryKey): bool
+    {
+        foreach ($columns as $column) {
+            if ($column->name === $primaryKey) {
+                $dbType = strtolower($column->type);
+                // UUID and string primary keys are not incrementing
+                if (in_array($dbType, ['varchar', 'char', 'string', 'uuid'])) {
+                    return false;
+                }
+                // Check if column has auto_increment
+                if (isset($column->extra) && strpos(strtolower($column->extra), 'auto_increment') !== false) {
+                    return true;
+                }
+
+                return true; // Default to true for integer types
+            }
+        }
+
+        return true;
+    }
+
+    private function generateHiddenFields(array $columns): array
+    {
+        if (! $this->config->getModelProperty('auto_hidden_fields', true)) {
+            return [];
+        }
+
+        $patterns = $this->config->getModelProperty('hidden_field_patterns', ['password', 'token', 'secret', 'key', 'hash']);
+        $hidden = [];
+
+        foreach ($columns as $column) {
+            foreach ($patterns as $pattern) {
+                if (strpos(strtolower($column->name), $pattern) !== false) {
+                    $hidden[] = "'{$column->name}'";
+                    break;
+                }
+            }
+        }
+
+        return $hidden;
+    }
+
+    private function generateVisibleFields(array $columns): array
+    {
+        if (! $this->config->getModelProperty('use_visible_instead_of_hidden', false)) {
+            return [];
+        }
+
+        // When using visible, include all non-sensitive fields
+        $patterns = $this->config->getModelProperty('hidden_field_patterns', ['password', 'token', 'secret', 'key', 'hash']);
+        $visible = [];
+
+        foreach ($columns as $column) {
+            $isHidden = false;
+            foreach ($patterns as $pattern) {
+                if (strpos(strtolower($column->name), $pattern) !== false) {
+                    $isHidden = true;
+                    break;
+                }
+            }
+            if (! $isHidden) {
+                $visible[] = "'{$column->name}'";
+            }
+        }
+
+        return $visible;
+    }
+
+    private function generateGuardedFields(array $columns): array
+    {
+        if (! $this->config->getModelProperty('use_guarded_instead_of_fillable', false)) {
+            return [];
+        }
+
+        return array_map(fn ($field) => "'{$field}'",
+            $this->config->getModelProperty('guarded_fields', ['id', 'created_at', 'updated_at'])
+        );
+    }
+
+    private function generateDefaultAttributes(array $columns): array
+    {
+        if (! $this->config->getModelProperty('auto_default_attributes', true)) {
+            return [];
+        }
+
+        $defaults = [];
+        foreach ($columns as $column) {
+            if (isset($column->default) && $column->default !== null && $column->default !== '') {
+                $value = is_numeric($column->default) ? $column->default : "'{$column->default}'";
+                $defaults[] = "'{$column->name}' => {$value}";
+            }
+        }
+
+        return $defaults;
+    }
+
+    private function detectSoftDeletes(array $columns): bool
+    {
+        if (! $this->config->getModelProperty('auto_detect_soft_deletes', true)) {
+            return false;
+        }
+
+        foreach ($columns as $column) {
+            if ($column->name === 'deleted_at') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function generatePerPageProperty(): string
+    {
+        $perPage = $this->config->getModelProperty('per_page');
+        if ($perPage === null) {
+            return '';
+        }
+
+        return "protected \$perPage = {$perPage};";
+    }
+
+    private function generateFillableOrGuarded(array $fillable, array $guarded): string
+    {
+        if ($this->config->getModelProperty('use_guarded_instead_of_fillable', false)) {
+            $content = $this->formatArrayContent($guarded);
+
+            return "/**\n     * The attributes that aren't mass assignable.\n     *\n     * @var array<string>\n     */\n    protected \$guarded = [\n        {$content}\n    ];";
+        }
+
+        $content = $this->formatArrayContent($fillable);
+
+        return "/**\n     * The attributes that are mass assignable.\n     *\n     * @var array<string>\n     */\n    protected \$fillable = [\n        {$content}\n    ];";
+    }
+
+    private function generateArrayProperty(string $property, array $items): string
+    {
+        if (empty($items)) {
+            return "protected \${$property} = [];";
+        }
+
+        $content = $this->formatArrayContent($items);
+
+        return "protected \${$property} = [\n        {$content}\n    ];";
+    }
+
+    private function generateWithProperty(): string
+    {
+        if (! $this->config->getModelProperty('auto_eager_load', false)) {
+            return 'protected $with = [];';
+        }
+
+        $relationships = $this->config->getModelProperty('eager_load_relationships', []);
+        if (empty($relationships)) {
+            return 'protected $with = [];';
+        }
+
+        $items = array_map(fn ($rel) => "'{$rel}'", $relationships);
+        $content = $this->formatArrayContent($items);
+
+        return "protected \$with = [\n        {$content}\n    ];";
+    }
+
+    private function generateAppendsProperty(): string
+    {
+        if (! $this->config->getModelProperty('auto_appends', false)) {
+            return 'protected $appends = [];';
+        }
+
+        return 'protected $appends = [];';
+    }
+
+    private function generateTouchesProperty(): string
+    {
+        if (! $this->config->getModelProperty('auto_touches', false)) {
+            return 'protected $touches = [];';
+        }
+
+        return 'protected $touches = [];';
     }
 }

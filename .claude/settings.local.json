@@ -7,7 +7,12 @@
       "Bash(vendor/bin/phpunit:*)",
       "Bash(claude mcp:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(sudo apt:*)",
+      "Bash(php:*)",
+      "Bash(apt list:*)",
+      "Bash(docker:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

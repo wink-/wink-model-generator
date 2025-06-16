@@ -4,6 +4,7 @@ namespace {{ namespace }};
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+{{ soft_delete_import }}
 
 /**
  * {{ class }} Model
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 class {{ class }} extends Model
 {
     use HasFactory;
+    {{ soft_delete_trait }}
 
     /**
      * The database connection that should be used by the model.
@@ -27,17 +29,17 @@ class {{ class }} extends Model
     /**
      * The primary key associated with the table.
      */
-    protected $primaryKey = 'id';
+    protected $primaryKey = '{{ primary_key }}';
 
     /**
      * Indicates if the model's ID is auto-incrementing.
      */
-    public $incrementing = true;
+    public $incrementing = {{ incrementing }};
 
     /**
      * The data type of the auto-incrementing ID.
      */
-    protected $keyType = 'int';
+    protected $keyType = '{{ key_type }}';
 
     /**
      * Indicates if the model should be timestamped.
@@ -47,26 +49,24 @@ class {{ class }} extends Model
     /**
      * The storage format of the model's date columns.
      */
-    protected $dateFormat = 'Y-m-d H:i:s';
+    protected $dateFormat = '{{ date_format }}';
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<string>
+     * The number of models to return for pagination.
      */
-    protected $fillable = [
-        {{ fillable }}
-    ];
+    {{ per_page_property }}
+
+    {{ fillable_or_guarded }}
 
     /**
      * The attributes that should be hidden for serialization.
      */
-    protected $hidden = [];
+    {{ hidden_property }}
 
     /**
      * The attributes that should be visible in serialization.
      */
-    protected $visible = [];
+    {{ visible_property }}
 
     /**
      * The attributes that should be cast.
@@ -80,7 +80,22 @@ class {{ class }} extends Model
     /**
      * The model's default values for attributes.
      */
-    protected $attributes = [];
+    {{ default_attributes }}
+
+    /**
+     * The relationships that should always be loaded.
+     */
+    {{ with_property }}
+
+    /**
+     * The accessors to append to the model's array form.
+     */
+    {{ appends_property }}
+
+    /**
+     * The relationships that should be touched on save.
+     */
+    {{ touches_property }}
 
     /**
      * Get the validation rules that apply to the model.

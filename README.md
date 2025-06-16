@@ -10,9 +10,13 @@ A focused Laravel package that automatically generates Eloquent models and facto
 ## Features
 
 - Supports MySQL and SQLite databases (including in-memory SQLite for testing)
-- Generates complete model files with proper namespacing
+- Generates complete model files with proper namespacing and **comprehensive Laravel model properties**
+- **Smart property detection**: auto-detects primary keys, key types, incrementing, soft deletes
+- **Enhanced security**: automatically hides sensitive fields (passwords, tokens, etc.)
+- **Flexible mass assignment**: configurable `$fillable` vs `$guarded` approaches
+- **Complete property support**: `$hidden`, `$visible`, `$attributes`, `$with`, `$perPage`, etc.
 - Auto-detects relationships from foreign keys
-- Configurable model generation options
+- Configurable model generation options via comprehensive config file
 - Generates PHPDoc properties for better IDE support
 - Includes validation rules based on schema
 - Handles custom database connections
@@ -41,68 +45,85 @@ You can publish the configuration file with:
 php artisan vendor:publish --provider="Wink\ModelGenerator\ModelGeneratorServiceProvider" --tag="config"
 ```
 
-This will create a `config/model-generator.php` file with the following options:
+This will create a `config/model-generator.php` file with comprehensive configuration options:
 
 ```php
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Model Namespace
-    |--------------------------------------------------------------------------
-    |
-    | This value defines the default namespace for generated model classes.
-    | You can override this on a per-model basis using the --namespace option.
-    |
-    | Note: Generated relationship methods currently assume that related models
-    | reside in the `App\Models` namespace. If you customize `model_namespace`
-    | to something else, you may need to manually adjust the namespaces in the
-    | generated relationship methods.
-    |
-    */
-    'model_namespace' => 'App\\Models',
+    // Basic configuration
+    'default_connection' => 'mysql',
+    'excluded_tables' => ['migrations', 'failed_jobs', /* ... */],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Model Output Path
-    |--------------------------------------------------------------------------
-    |
-    | This value defines the default base path for models and is used to
-    | determine their PHP namespace (e.g., `App\Models` if `model_path` is
-    | `app/Models`). By default, models will be placed in a
-    | `GeneratedModels/{connection_name}` subdirectory within this path
-    | (e.g., `app/Models/GeneratedModels/mysql`). This final output path can be
-    | fully customized using the `--directory` command-line option.
-    |
-    */
-    'model_path' => 'app/Models',
+    // Model Property Generation Options
+    'model_properties' => [
+        // Auto-detect primary key from schema instead of hardcoding 'id'
+        'auto_detect_primary_key' => true,
 
-    /*
-    |--------------------------------------------------------------------------
-    | Factory Output Path
-    |--------------------------------------------------------------------------
-    |
-    | This value defines the default base output path for generated factory files.
-    | By default, factories will be placed in a
-    | `GeneratedFactories/{connection_name}` subdirectory within this path
-    | (e.g., `database/factories/GeneratedFactories/mysql`). This output path
-    | can be fully customized using the `--factory-directory` command-line option.
-    |
-    */
-    'factory_path' => 'database/factories',
+        // Generate $hidden array for sensitive fields (password, token, etc.)
+        'auto_hidden_fields' => true,
+        'hidden_field_patterns' => ['password', 'token', 'secret', 'key', 'hash'],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validation Rules
-    |--------------------------------------------------------------------------
-    |
-    | When true, the generator will add a `public static function rules(): array`
-    | method to the model class. This method contains Laravel validation rules
-    | based on the column types and constraints.
-    |
-    */
-    'generate_validation_rules' => true,
+        // Generate $guarded array (alternative to $fillable)
+        'use_guarded_instead_of_fillable' => false,
+        'guarded_fields' => ['id', 'created_at', 'updated_at'],
+
+        // Pagination settings
+        'per_page' => null, // Set to integer to override default pagination
+
+        // Date format customization
+        'date_format' => 'Y-m-d H:i:s', // Laravel default
+
+        // Auto-generate $attributes for default values based on schema
+        'auto_default_attributes' => true,
+
+        // Auto-generate $with for common relationships
+        'auto_eager_load' => false,
+        'eager_load_relationships' => [], // e.g., ['user', 'category']
+
+        // Soft delete detection
+        'auto_detect_soft_deletes' => true,
+
+        // Generate $visible array (alternative to $hidden)
+        'use_visible_instead_of_hidden' => false,
+    ],
+
+    // Custom field type mappings
+    'custom_casts' => [
+        // Add custom cast mappings here
+    ],
+
+    // Validation rules generation
+    'validation' => [
+        'generate_rules' => true,
+        'strict_rules' => false,
+        'include_unique_rules' => true,
+    ],
 ];
 ```
+
+### Model Property Generation
+
+The package now automatically generates comprehensive Laravel model properties based on your database schema:
+
+**Smart Detection:**
+- **Primary Keys**: Auto-detects from schema instead of hardcoding 'id'
+- **Key Types**: Sets `$keyType` to 'string' for UUID/varchar keys, 'int' for integers
+- **Incrementing**: Sets `$incrementing = false` for UUID/string primary keys
+- **Soft Deletes**: Detects `deleted_at` columns and adds SoftDeletes trait
+- **Timestamps**: Detects `created_at`/`updated_at` columns
+
+**Security & Visibility:**
+- **Hidden Fields**: Automatically hides sensitive fields matching patterns (password, token, secret, etc.)
+- **Visible Fields**: Option to use `$visible` instead of `$hidden`
+
+**Mass Assignment:**
+- **Fillable vs Guarded**: Choose between `$fillable` and `$guarded` approaches
+- **Smart Exclusions**: Automatically excludes primary keys and timestamps from fillable
+
+**Advanced Properties:**
+- **Default Attributes**: Generates `$attributes` array from schema default values
+- **Pagination**: Configure custom `$perPage` values
+- **Eager Loading**: Auto-generate `$with` for common relationships
+- **Date Formatting**: Customize `$dateFormat`
 
 ## Usage
 
