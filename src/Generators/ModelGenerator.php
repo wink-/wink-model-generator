@@ -15,10 +15,16 @@ class ModelGenerator
 
     private FileService $fileService;
 
+    private ScopeGenerator $scopeGenerator;
+
+    private EventsGenerator $eventsGenerator;
+
     public function __construct(GeneratorConfig $config, FileService $fileService)
     {
         $this->config = $config;
         $this->fileService = $fileService;
+        $this->scopeGenerator = new ScopeGenerator($config);
+        $this->eventsGenerator = new EventsGenerator($config);
     }
 
     /**
@@ -33,7 +39,8 @@ class ModelGenerator
         array $columns,
         array $foreignKeys = [],
         bool $withRelationships = false,
-        bool $withRules = false
+        bool $withRules = false,
+        bool $withEvents = false
     ): string {
         if (empty($modelName) || empty($tableName)) {
             throw new InvalidInputException('Model name and table name are required');
@@ -48,7 +55,8 @@ class ModelGenerator
             $columns,
             $foreignKeys,
             $withRelationships,
-            $withRules
+            $withRules,
+            $withEvents
         );
 
         return str_replace(
@@ -65,7 +73,8 @@ class ModelGenerator
         array $columns,
         array $foreignKeys,
         bool $withRelationships,
-        bool $withRules
+        bool $withRules,
+        bool $withEvents
     ): array {
         $timestamps = false;
         $namespace = 'App\\Models';
@@ -83,6 +92,7 @@ class ModelGenerator
             'casts' => [],
             'rules' => [],
             'relationships' => [],
+            'scopes' => [],
         ];
 
         foreach ($columns as $column) {
@@ -97,6 +107,22 @@ class ModelGenerator
             $modelData['rules'] = $this->generateValidationRules($columns);
         }
 
+        // Detect soft deletes early for event generation
+        $softDeletes = $this->detectSoftDeletes($columns);
+
+        // Generate scopes
+        $modelData['scopes'] = $this->scopeGenerator->generateScopes($columns);
+        $modelData['scopes'] = array_merge($modelData['scopes'], $this->scopeGenerator->generateTimestampScopes($columns));
+
+        // Generate events
+        $modelData['events'] = [];
+        $modelData['bootMethod'] = '';
+        $shouldGenerateEvents = $withEvents || $this->config->getModelProperty('generate_event_methods', false);
+        if ($shouldGenerateEvents) {
+            $modelData['events'] = $this->eventsGenerator->generateEventMethods($modelName, $softDeletes);
+            $modelData['bootMethod'] = $this->eventsGenerator->generateBootMethod($modelName, $softDeletes);
+        }
+
         // Detect primary key
         $primaryKey = $this->detectPrimaryKey($columns);
         $keyType = $this->detectKeyType($columns, $primaryKey);
@@ -107,7 +133,6 @@ class ModelGenerator
         $visibleFields = $this->generateVisibleFields($columns);
         $guardedFields = $this->generateGuardedFields($columns);
         $defaultAttributes = $this->generateDefaultAttributes($columns);
-        $softDeletes = $this->detectSoftDeletes($columns);
 
         return [
             '{{ namespace }}' => $namespace,
@@ -134,6 +159,16 @@ class ModelGenerator
             '{{ relationships }}' => implode("\n\n", $modelData['relationships']),
             '{{ casts }}' => $this->formatArrayContent($modelData['casts']),
             '{{ rules }}' => $this->formatArrayContent($modelData['rules']),
+            '{{ scopes }}' => empty($modelData['scopes']) ? '' : "\n".implode("\n\n", $modelData['scopes']),
+            '{{ boot_method }}' => $modelData['bootMethod'],
+            '{{ event_methods }}' => empty($modelData['events']) ? '' : "\n".implode("\n\n", $modelData['events']),
+            '{{ business_description }}' => $this->generateBusinessDescription($modelName, $tableName),
+            '{{ package_name }}' => $this->generatePackageName(),
+            '{{ created_date }}' => now()->format('Y-m-d'),
+            '{{ business_rules }}' => $this->generateBusinessRules($modelName, $columns),
+            '{{ api_endpoint }}' => $this->generateApiEndpoint($modelName),
+            '{{ cacheable_attributes }}' => $this->generateCacheableAttributes($columns),
+            '{{ searchable_fields }}' => $this->generateSearchableFields($columns),
         ];
     }
 
@@ -547,5 +582,82 @@ EOT;
         }
 
         return 'protected $touches = [];';
+    }
+
+    private function generateBusinessDescription(string $modelName, string $tableName): string
+    {
+        $singular = Str::singular($tableName);
+        $plural = Str::plural($tableName);
+
+        return "a {$singular} entity in the {$plural} business domain";
+    }
+
+    private function generatePackageName(): string
+    {
+        return 'App\\Models\\Generated';
+    }
+
+    private function generateBusinessRules(string $modelName, array $columns): string
+    {
+        $rules = [];
+
+        foreach ($columns as $column) {
+            if ($column->name === 'status') {
+                $rules[] = 'Status must be managed through proper business workflows';
+            }
+            if ($column->name === 'user_id') {
+                $rules[] = 'Must be associated with a valid user';
+            }
+            if (str_contains($column->name, 'email')) {
+                $rules[] = 'Email addresses must be unique and validated';
+            }
+            if (str_contains($column->name, 'phone')) {
+                $rules[] = 'Phone numbers should follow international format';
+            }
+        }
+
+        return empty($rules) ? 'Standard business validation rules apply' : implode("\n * - ", $rules);
+    }
+
+    private function generateApiEndpoint(string $modelName): string
+    {
+        return Str::kebab(Str::plural($modelName));
+    }
+
+    private function generateCacheableAttributes(array $columns): string
+    {
+        $cacheable = [];
+
+        foreach ($columns as $column) {
+            // Skip sensitive or frequently changing fields
+            if (in_array($column->name, ['password', 'remember_token', 'updated_at', 'deleted_at'])) {
+                continue;
+            }
+
+            // Include stable, frequently accessed fields
+            if (in_array($column->name, ['id', 'name', 'title', 'slug', 'email', 'status', 'type', 'created_at'])) {
+                $cacheable[] = "'{$column->name}'";
+            }
+        }
+
+        return implode(', ', $cacheable);
+    }
+
+    private function generateSearchableFields(array $columns): string
+    {
+        $searchable = [];
+
+        foreach ($columns as $column) {
+            $type = strtolower($column->type);
+
+            // Only include text-based fields that are commonly searched
+            if (in_array($type, ['varchar', 'char', 'text', 'longtext', 'mediumtext', 'tinytext', 'string'])) {
+                if (in_array($column->name, ['name', 'title', 'description', 'content', 'body', 'summary', 'email', 'username', 'slug'])) {
+                    $searchable[] = "'{$column->name}'";
+                }
+            }
+        }
+
+        return implode(', ', $searchable);
     }
 }

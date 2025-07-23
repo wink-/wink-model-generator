@@ -30,14 +30,14 @@ class FactoryGeneratorTest extends TestCase
         $this->generator = new FactoryGenerator($this->config);
 
         // Create the templates directory and factory.stub file
-        $templateDir = __DIR__ . '/../../../src/Templates';
+        $templateDir = __DIR__ . '/../../../stubs';
         if (!file_exists($templateDir)) {
             mkdir($templateDir, 0777, true);
         }
 
         // Copy the factory.stub template
         copy(
-            __DIR__ . '/../../../src/Templates/factory.stub',
+            __DIR__ . '/../../../stubs/factory.stub',
             $templateDir . '/factory.stub'
         );
     }
@@ -71,9 +71,9 @@ class FactoryGeneratorTest extends TestCase
         $this->assertStringContainsString("'name' => fake()->name()", $factoryContent);
         $this->assertStringContainsString("'email' => fake()->safeEmail()", $factoryContent);
         
-        // Assert timestamps are excluded
-        $this->assertStringNotContainsString('created_at', $factoryContent);
-        $this->assertStringNotContainsString('updated_at', $factoryContent);
+        // Assert timestamps are excluded from main definition (but may appear in business methods)
+        $this->assertStringNotContainsString("'created_at' => fake()->", $factoryContent);
+        $this->assertStringNotContainsString("'updated_at' => fake()->", $factoryContent);
     }
 
     public function testGenerateFactoryWithCommonColumnTypes(): void

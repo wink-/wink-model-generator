@@ -13,6 +13,7 @@ use Wink\ModelGenerator\Database\MySqlSchemaReader;
 use Wink\ModelGenerator\Database\PostgreSqlSchemaReader;
 use Wink\ModelGenerator\Database\SchemaReader;
 use Wink\ModelGenerator\Database\SqliteSchemaReader;
+use Wink\ModelGenerator\Generators\ObserverGenerator;
 use Wink\ModelGenerator\Services\FileService;
 use Wink\ModelGenerator\Services\ModelService;
 
@@ -58,6 +59,11 @@ class ModelGeneratorServiceProvider extends PackageServiceProvider
         // Register ModelService
         $this->app->singleton(ModelService::class, function ($app) {
             return new ModelService;
+        });
+
+        // Register ObserverGenerator
+        $this->app->singleton(ObserverGenerator::class, function ($app) {
+            return new ObserverGenerator($app->make(GeneratorConfig::class));
         });
 
         if ($this->app->environment('testing')) {

@@ -1,0 +1,366 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ observer_namespace }};
+
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+{{ model_import }}
+
+/**
+ * {{ observer_class }} - Business Event Observer
+ * 
+ * Handles business logic for {{ model_class }} model events
+ * 
+ * Features:
+ * - Comprehensive audit logging
+ * - Business notification system
+ * - Cache management
+ * - Search index synchronization
+ * - Workflow triggers
+ * - Data validation and integrity
+ * 
+ * Business Rules:
+ * - All changes are logged for compliance
+ * - Critical changes trigger notifications
+ * - Cache is invalidated on updates
+ * - Business workflows are triggered on status changes
+ * 
+ * @package {{ package_name }}
+ */
+class {{ observer_class }}
+{
+    // ===================================================================
+    // LIFECYCLE EVENT HANDLERS
+    // ===================================================================
+
+{{ observer_methods }}
+
+    // ===================================================================
+    // BUSINESS LOGIC HELPERS
+    // ===================================================================
+
+    /**
+     * Handle business audit logging
+     */
+    private function auditBusinessAction({{ model_class }} $model, string $action, array $changes = []): void
+    {
+        if (!$model->shouldAudit()) {
+            return;
+        }
+
+        $auditData = [
+            'model_type' => get_class($model),
+            'model_id' => $model->id,
+            'action' => $action,
+            'changes' => $changes,
+            'user_id' => auth()->id(),
+            'ip_address' => request()?->ip(),
+            'user_agent' => request()?->userAgent(),
+            'timestamp' => now(),
+        ];
+
+        // Log to application log
+        Log::info("Business audit: {$action} on " . class_basename($model), $auditData);
+
+        // Store in audit table if available
+        if (class_exists('\App\Models\AuditLog')) {
+            \App\Models\AuditLog::create($auditData);
+        }
+    }
+
+    /**
+     * Handle business notifications
+     */
+    private function handleBusinessNotifications({{ model_class }} $model, string $event, array $context = []): void
+    {
+        // Skip notifications for test/demo data
+        if ($model->is_test ?? false || $model->is_demo ?? false) {
+            return;
+        }
+
+        $notificationClass = $this->getNotificationClass($event);
+        
+        if (!$notificationClass || !class_exists($notificationClass)) {
+            return;
+        }
+
+        // Get notification recipients
+        $recipients = $this->getNotificationRecipients($model, $event);
+        
+        if (empty($recipients)) {
+            return;
+        }
+
+        // Send notifications
+        Notification::send($recipients, new $notificationClass($model, $context));
+    }
+
+    /**
+     * Get notification class for event
+     */
+    private function getNotificationClass(string $event): ?string
+    {
+        $className = class_basename({{ model_class }}::class);
+        
+        return match($event) {
+            'created' => "\\App\\Notifications\\{$className}CreatedNotification",
+            'updated' => "\\App\\Notifications\\{$className}UpdatedNotification",
+            'deleted' => "\\App\\Notifications\\{$className}DeletedNotification",
+            'status_changed' => "\\App\\Notifications\\{$className}StatusChangedNotification",
+            default => null,
+        };
+    }
+
+    /**
+     * Get notification recipients for model event
+     */
+    private function getNotificationRecipients({{ model_class }} $model, string $event): array
+    {
+        $recipients = [];
+
+        // Add model owner
+        if ($model->user_id && $model->user) {
+            $recipients[] = $model->user;
+        }
+
+        // Add administrators for critical events
+        if (in_array($event, ['created', 'deleted', 'status_changed'])) {
+            $admins = \App\Models\User::where('role', 'admin')
+                ->where('notifications_enabled', true)
+                ->get();
+            
+            $recipients = array_merge($recipients, $admins->toArray());
+        }
+
+        return array_unique($recipients);
+    }
+
+    /**
+     * Handle cache invalidation
+     */
+    private function invalidateBusinessCache({{ model_class }} $model): void
+    {
+        $modelName = strtolower(class_basename($model));
+        
+        $tags = [
+            "model_{$modelName}",
+            "model_{$modelName}_{$model->id}",
+            "{$modelName}_list",
+            "{$modelName}_search",
+        ];
+
+        // Add user-specific cache tags
+        if ($model->user_id) {
+            $tags[] = "user_{$model->user_id}_{$modelName}";
+        }
+
+        // Add status-specific cache tags
+        if (isset($model->status)) {
+            $tags[] = "{$modelName}_status_{$model->status}";
+        }
+
+        Cache::tags($tags)->flush();
+        
+        Log::debug("Cache invalidated for {$modelName}#{$model->id}", ['tags' => $tags]);
+    }
+
+    /**
+     * Handle search index updates
+     */
+    private function updateSearchIndex({{ model_class }} $model, string $action): void
+    {
+        // Skip if search indexing is disabled
+        if (!config('search.enabled', false)) {
+            return;
+        }
+
+        // Check if model is searchable
+        if (!method_exists($model, 'toSearchableArray')) {
+            return;
+        }
+
+        // Dispatch search index job
+        $jobClass = match($action) {
+            'created', 'updated' => '\App\Jobs\IndexModelJob',
+            'deleted' => '\App\Jobs\RemoveFromIndexJob',
+            default => null,
+        };
+
+        if ($jobClass && class_exists($jobClass)) {
+            dispatch(new $jobClass($model));
+        }
+    }
+
+    /**
+     * Handle workflow triggers
+     */
+    private function triggerBusinessWorkflows({{ model_class }} $model, string $event, array $changes = []): void
+    {
+        // Skip workflows for test/demo data
+        if ($model->is_test ?? false || $model->is_demo ?? false) {
+            return;
+        }
+
+        // Status change workflows
+        if (isset($changes['status'])) {
+            $this->triggerStatusWorkflow($model, $changes['status']);
+        }
+
+        // Priority change workflows
+        if (isset($changes['priority'])) {
+            $this->triggerPriorityWorkflow($model, $changes['priority']);
+        }
+
+        // User assignment workflows
+        if (isset($changes['user_id'])) {
+            $this->triggerAssignmentWorkflow($model, $changes['user_id']);
+        }
+    }
+
+    /**
+     * Trigger status-based workflows
+     */
+    private function triggerStatusWorkflow({{ model_class }} $model, string $newStatus): void
+    {
+        $workflowClass = '\App\Workflows\' . class_basename($model) . 'StatusWorkflow';
+        
+        if (class_exists($workflowClass)) {
+            $workflow = new $workflowClass($model);
+            $workflow->handle($newStatus);
+        }
+    }
+
+    /**
+     * Trigger priority-based workflows
+     */
+    private function triggerPriorityWorkflow({{ model_class }} $model, string $newPriority): void
+    {
+        if ($newPriority === 'urgent') {
+            // Notify relevant teams immediately
+            $this->handleBusinessNotifications($model, 'urgent_priority', ['priority' => $newPriority]);
+        }
+    }
+
+    /**
+     * Trigger assignment workflows
+     */
+    private function triggerAssignmentWorkflow({{ model_class }} $model, int $newUserId): void
+    {
+        $user = \App\Models\User::find($newUserId);
+        
+        if ($user) {
+            $this->handleBusinessNotifications($model, 'assigned', ['assigned_to' => $user]);
+        }
+    }
+
+    /**
+     * Validate business constraints
+     */
+    private function validateBusinessConstraints({{ model_class }} $model, string $event): bool
+    {
+        // Skip validation for test/demo data
+        if ($model->is_test ?? false || $model->is_demo ?? false) {
+            return true;
+        }
+
+        // Validate status transitions
+        if (isset($model->status) && $event === 'updating') {
+            if (!$this->isValidStatusTransition($model)) {
+                Log::warning("Invalid status transition attempted", [
+                    'model' => class_basename($model),
+                    'id' => $model->id,
+                    'from' => $model->getOriginal('status'),
+                    'to' => $model->status,
+                ]);
+                return false;
+            }
+        }
+
+        // Validate business rules
+        if (!$this->validateBusinessRules($model)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate status transitions
+     */
+    private function isValidStatusTransition({{ model_class }} $model): bool
+    {
+        $originalStatus = $model->getOriginal('status');
+        $newStatus = $model->status;
+
+        // Define valid transitions
+        $validTransitions = [
+            'pending' => ['active', 'rejected'],
+            'active' => ['inactive', 'archived'],
+            'inactive' => ['active', 'archived'],
+            'archived' => [], // No transitions from archived
+            'rejected' => ['pending'], // Can be resubmitted
+        ];
+
+        return isset($validTransitions[$originalStatus]) && 
+               in_array($newStatus, $validTransitions[$originalStatus]);
+    }
+
+    /**
+     * Validate business rules
+     */
+    private function validateBusinessRules({{ model_class }} $model): bool
+    {
+        // Required fields validation
+        if (empty($model->name) && empty($model->title)) {
+            Log::error("Business rule violation: Model must have name or title", [
+                'model' => class_basename($model),
+                'id' => $model->id,
+            ]);
+            return false;
+        }
+
+        // User association validation
+        if (isset($model->user_id) && !$model->user) {
+            Log::error("Business rule violation: Invalid user association", [
+                'model' => class_basename($model),
+                'id' => $model->id,
+                'user_id' => $model->user_id,
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if changes are business-critical
+     */
+    private function hasBusinessCriticalChanges(array $changes): bool
+    {
+        $criticalFields = ['status', 'user_id', 'priority', 'type', 'visibility', 'is_active'];
+        
+        return !empty(array_intersect(array_keys($changes), $criticalFields));
+    }
+
+    /**
+     * Get business context for logging
+     */
+    private function getBusinessContext({{ model_class }} $model, string $event): array
+    {
+        return [
+            'model_type' => class_basename($model),
+            'model_id' => $model->id,
+            'event' => $event,
+            'status' => $model->status ?? null,
+            'user_id' => $model->user_id ?? null,
+            'created_by' => $model->created_by ?? null,
+            'updated_by' => $model->updated_by ?? null,
+            'business_display_name' => method_exists($model, 'getBusinessDisplayName') 
+                ? $model->getBusinessDisplayName() 
+                : "#{$model->id}",
+        ];
+    }
+}

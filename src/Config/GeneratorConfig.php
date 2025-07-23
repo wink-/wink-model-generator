@@ -22,6 +22,12 @@ class GeneratorConfig
 
     private array $modelProperties;
 
+    private string $observerNamespace;
+
+    private string $observerPath;
+
+    private array $observerProperties;
+
     public function __construct(array $config = [])
     {
         // Use provided config or fallback to Laravel config
@@ -45,6 +51,9 @@ class GeneratorConfig
         $this->factoryPath = $config['factory_path'] ?? Config::get('model-generator.factory_path', database_path('factories'));
         $this->resourcePath = $config['resource_path'] ?? Config::get('model-generator.resource_path', app_path('Http/Resources'));
 
+        $this->observerNamespace = $config['observer_namespace'] ?? Config::get('model-generator.observer_namespace', 'App\\Observers');
+        $this->observerPath = $config['observer_path'] ?? Config::get('model-generator.observer_path', app_path('Observers'));
+
         $defaultModelProperties = [
             'auto_detect_primary_key' => true,
             'auto_hidden_fields' => true,
@@ -60,9 +69,52 @@ class GeneratorConfig
             'auto_touches' => false,
             'auto_detect_soft_deletes' => true,
             'use_visible_instead_of_hidden' => false,
+            'auto_generate_scopes' => false,
+            'auto_generate_timestamp_scopes' => true,
+            'boolean_scope_patterns' => [
+                'is_active' => ['active', 'inactive'],
+                'is_published' => ['published', 'unpublished'],
+                'is_featured' => ['featured', 'notFeatured'],
+                'is_enabled' => ['enabled', 'disabled'],
+                'is_verified' => ['verified', 'unverified'],
+                'is_approved' => ['approved', 'unapproved'],
+                'is_visible' => ['visible', 'hidden'],
+                'is_archived' => ['archived', 'notArchived'],
+            ],
+            'boolean_column_patterns' => [
+                'is_', 'has_', 'can_', 'should_', 'will_', 'active', 'enabled', 'published', 'featured', 'verified', 'approved', 'visible', 'archived',
+            ],
+            'status_column_patterns' => [
+                'status', 'state', 'type', 'category', 'kind', 'mode',
+            ],
+            'searchable_column_patterns' => [
+                'name', 'title', 'description', 'content', 'body', 'summary', 'subject', 'message', 'comment', 'note', 'email', 'username', 'slug',
+            ],
+            // Event generation configuration
+            'generate_event_methods' => false,
+            'generate_boot_method' => false,
+            'model_events' => ['creating', 'created', 'updating', 'updated', 'deleting', 'deleted', 'saving', 'saved'],
+            'exclude_model_events' => [],
+            'include_retrieved_event' => false,
+            'include_booted_event' => false,
+            'event_method_stubs' => true,
+            'event_method_type' => 'direct', // 'direct' or 'boot'
         ];
 
         $this->modelProperties = $config['model_properties'] ?? Config::get('model-generator.model_properties', $defaultModelProperties);
+
+        $defaultObserverProperties = [
+            'generate_observers' => false,
+            'observer_events' => ['creating', 'created', 'updating', 'updated', 'deleting', 'deleted', 'saving', 'saved'],
+            'exclude_events' => [],
+            'include_retrieved' => false,
+            'include_booted' => false,
+            'auto_register_observers' => true,
+            'observer_method_stubs' => true,
+            'observer_connection_based' => true,
+        ];
+
+        $this->observerProperties = $config['observer_properties'] ?? Config::get('model-generator.observer_properties', $defaultObserverProperties);
     }
 
     public function getExcludedTables(): array
@@ -103,5 +155,25 @@ class GeneratorConfig
     public function getModelProperty(string $key, $default = null)
     {
         return $this->modelProperties[$key] ?? $default;
+    }
+
+    public function getObserverNamespace(): string
+    {
+        return $this->observerNamespace;
+    }
+
+    public function getObserverPath(): string
+    {
+        return $this->observerPath;
+    }
+
+    public function getObserverProperties(): array
+    {
+        return $this->observerProperties;
+    }
+
+    public function getObserverProperty(string $key, $default = null)
+    {
+        return $this->observerProperties[$key] ?? $default;
     }
 }

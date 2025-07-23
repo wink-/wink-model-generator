@@ -54,8 +54,16 @@ class SqliteSchemaReader implements SchemaReader
         // Only set read-only mode if database exists
         DB::connection($connection)->statement('PRAGMA query_only = 1');
 
-        return DB::connection($connection)
+        $columns = DB::connection($connection)
             ->select("PRAGMA table_info({$tableName})");
+        
+        // Ensure pk field is properly converted to boolean and add primary alias
+        foreach ($columns as $column) {
+            $column->pk = (bool) $column->pk;
+            $column->primary = $column->pk;
+        }
+        
+        return $columns;
     }
 
     public function getForeignKeys(string $connection, string $tableName): array

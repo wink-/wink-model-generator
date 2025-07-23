@@ -1,5 +1,5 @@
 {
-    "name": "wink/wink-model-generator",
+    "name": "wink/model-generator",
     "description": "A powerful Laravel package that automatically generates Eloquent models from your existing database schema, supporting both MySQL and SQLite databases",
     "keywords": [
         "laravel",
@@ -23,9 +23,9 @@
     ],
     "require": {
         "php": "^8.3",
-        "illuminate/support": "^11.0",
-        "illuminate/console": "^11.0",
-        "illuminate/database": "^11.0",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/console": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.0",
         "spatie/laravel-package-tools": "^1.0"
     },
     "require-dev": {
@@ -33,7 +33,7 @@
         "laravel/pint": "^1.22",
         "mockery/mockery": "^1.6",
         "monolog/monolog": "^3.0",
-        "orchestra/testbench": "^9.0",
+        "orchestra/testbench": "^9.0|^10.0",
         "phpstan/phpstan": "^1.0",
         "phpunit/phpunit": "^10.5"
     },

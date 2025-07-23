@@ -53,10 +53,22 @@ class MySqlSchemaReader implements SchemaReader
             ORDER BY ORDINAL_POSITION",
                 [$schema, $tableName]);
 
+        // Get primary key columns
+        $primaryKeyResult = DB::connection($connection)
+            ->select("SELECT COLUMN_NAME
+                FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = ?
+                AND TABLE_NAME = ?
+                AND INDEX_NAME = 'PRIMARY'",
+                [$schema, $tableName]);
+        
+        $primaryKeyColumns = array_map(fn($row) => $row->COLUMN_NAME, $primaryKeyResult);
+
         // Get fulltext indexes to mark columns
         $fulltextColumns = $this->getFulltextColumns($connection, $schema, $tableName);
         foreach ($columns as $column) {
             $column->fulltext = in_array($column->name, $fulltextColumns);
+            $column->primary = in_array($column->name, $primaryKeyColumns);
         }
 
         return $columns;

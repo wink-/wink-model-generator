@@ -1,10 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace {{ namespace }};
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
 use {{ modelNamespace }}\{{ modelName }};
 
+/**
+ * {{ modelName }} Factory
+ * 
+ * Generates realistic business data for {{ modelName }} models
+ * 
+ * @extends Factory<{{ modelName }}>
+ * 
+ * @method {{ modelName }} create(array $attributes = [])
+ * @method {{ modelName }} make(array $attributes = [])
+ * 
+ * Business States:
+ * - active(): Active business entities
+ * - inactive(): Inactive business entities
+ * - pending(): Pending approval entities
+ * - archived(): Archived entities
+ * 
+ * Test Scenarios:
+ * - forTesting(): Data suitable for automated testing
+ * - forDemo(): Demo data for presentations
+ * - forDevelopment(): Development-friendly data
+ */
 class {{ modelName }}Factory extends Factory
 {
     /**
@@ -15,7 +39,7 @@ class {{ modelName }}Factory extends Factory
     protected $model = {{ modelName }}::class;
 
     /**
-     * Define the model's default state.
+     * Define the model's default state with realistic business data.
      *
      * @return array<string, mixed>
      */
@@ -24,5 +48,226 @@ class {{ modelName }}Factory extends Factory
         return [
 {{ definitionsString }}
         ];
+    }
+
+    // ===================================================================
+    // BUSINESS STATE METHODS
+    // ===================================================================
+
+    /**
+     * Generate an active business entity
+     */
+    public function active(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'active',
+                'is_active' => true,
+                'activated_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            ];
+        });
+    }
+
+    /**
+     * Generate an inactive business entity
+     */
+    public function inactive(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'inactive',
+                'is_active' => false,
+                'deactivated_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
+            ];
+        });
+    }
+
+    /**
+     * Generate a pending approval entity
+     */
+    public function pending(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'pending',
+                'is_active' => false,
+                'submitted_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            ];
+        });
+    }
+
+    /**
+     * Generate an archived entity
+     */
+    public function archived(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'archived',
+                'is_active' => false,
+                'archived_at' => $this->faker->dateTimeBetween('-2 years', '-1 year'),
+            ];
+        });
+    }
+
+    // ===================================================================
+    // BUSINESS SCENARIO METHODS
+    // ===================================================================
+
+    /**
+     * Generate data for new business entities
+     */
+    public function new(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'active',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        });
+    }
+
+    /**
+     * Generate data for enterprise-level entities
+     */
+    public function enterprise(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'type' => 'enterprise',
+                'tier' => 'premium',
+                'priority' => 'high',
+            ];
+        });
+    }
+
+    /**
+     * Generate data suitable for automated testing
+     */
+    public function forTesting(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Test ' . $this->faker->word(),
+                'email' => 'test+' . $this->faker->uuid() . '@example.com',
+                'is_test' => true,
+                'created_at' => now(),
+            ];
+        });
+    }
+
+    /**
+     * Generate demo data for presentations
+     */
+    public function forDemo(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Demo ' . $this->faker->company(),
+                'description' => 'This is demo data for presentation purposes.',
+                'is_demo' => true,
+                'featured' => true,
+            ];
+        });
+    }
+
+    /**
+     * Generate development-friendly data
+     */
+    public function forDevelopment(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Dev ' . $this->faker->word(),
+                'email' => 'dev+' . $this->faker->userName() . '@localhost',
+                'password' => Hash::make('password'),
+                'is_dev' => true,
+            ];
+        });
+    }
+
+    // ===================================================================
+    // BUSINESS RELATIONSHIP METHODS
+    // ===================================================================
+
+    /**
+     * Create with associated user
+     */
+    public function withUser($user = null): static
+    {
+        return $this->state(function (array $attributes) use ($user) {
+            return [
+                'user_id' => $user?->id ?? \App\Models\User::factory()->create()->id,
+                'created_by' => $user?->id ?? $attributes['user_id'],
+            ];
+        });
+    }
+
+    /**
+     * Create with business metadata
+     */
+    public function withBusinessMetadata(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'metadata' => [
+                    'source' => $this->faker->randomElement(['web', 'api', 'import', 'admin']),
+                    'campaign' => $this->faker->optional()->word(),
+                    'tags' => $this->faker->words(3),
+                    'priority' => $this->faker->randomElement(['low', 'medium', 'high', 'urgent']),
+                ],
+            ];
+        });
+    }
+
+    // ===================================================================
+    // BUSINESS VALIDATION HELPERS
+    // ===================================================================
+
+    /**
+     * Generate with business constraints applied
+     */
+    public function withBusinessConstraints(): static
+    {
+        return $this->state(function (array $attributes) {
+            // Apply business logic constraints
+            if (isset($attributes['type']) && $attributes['type'] === 'premium') {
+                $attributes['features'] = ['advanced_analytics', 'priority_support', 'custom_branding'];
+                $attributes['limits'] = ['users' => 1000, 'storage' => '100GB', 'api_calls' => 100000];
+            }
+            
+            // Ensure email uniqueness in business context
+            if (isset($attributes['email'])) {
+                $attributes['email'] = strtolower($attributes['email']);
+                $attributes['email_verified_at'] = $this->faker->optional(0.8)->dateTimeBetween('-1 year', 'now');
+            }
+            
+            // Apply status-dependent fields
+            if (isset($attributes['status'])) {
+                $attributes['status_changed_at'] = $this->faker->dateTimeBetween('-1 year', 'now');
+                $attributes['status_changed_by'] = \App\Models\User::factory()->create()->id;
+            }
+            
+            return $attributes;
+        });
+    }
+
+    /**
+     * Generate realistic sequence data for bulk operations
+     */
+    public function sequence(int $count): static
+    {
+        return $this->state(function (array $attributes) use ($count) {
+            static $sequenceCounter = 0;
+            $sequenceCounter++;
+            
+            return [
+                'sequence_number' => $sequenceCounter,
+                'batch_id' => 'BATCH_' . now()->format('YmdHis'),
+                'position' => $sequenceCounter,
+            ];
+        });
     }
 }

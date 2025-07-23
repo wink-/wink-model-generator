@@ -31,12 +31,23 @@ class FactoryGenerator
 
         $definitionsString = implode(",\n", $definitions);
 
-        $template = File::get(__DIR__.'/../Templates/factory.stub');
+        $template = File::get(__DIR__.'/../../stubs/factory.stub');
+
+        // Extract the base model name and full namespace
+        $modelBaseName = class_basename($modelName);
+        $modelNamespace = $this->config->getModelNamespace();
+        
+        // If modelName contains namespace separators, prepend to namespace
+        if (str_contains($modelName, '\\')) {
+            $parts = explode('\\', $modelName);
+            $modelBaseName = array_pop($parts);
+            $modelNamespace .= '\\' . implode('\\', $parts);
+        }
 
         $replacements = [
             '{{ namespace }}' => $this->config->getFactoryNamespace(),
-            '{{ modelNamespace }}' => $this->config->getModelNamespace(),
-            '{{ modelName }}' => $modelName,
+            '{{ modelNamespace }}' => $modelNamespace,
+            '{{ modelName }}' => $modelBaseName,
             '{{ definitionsString }}' => $definitionsString,
         ];
 
