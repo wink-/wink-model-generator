@@ -21,7 +21,8 @@ class FactoryGenerator
     {
         $definitions = [];
         foreach ($columns as $column) {
-            if ($column->name === 'id' || $column->name === 'created_at' || $column->name === 'updated_at') {
+            // Skip auto-incremented fields, timestamps, and common ID fields
+            if ($this->shouldSkipColumn($column)) {
                 continue;
             }
 
@@ -56,6 +57,28 @@ class FactoryGenerator
             fn (string $content, string $key) => Str::replace($key, $replacements[$key], $content),
             $template
         );
+    }
+
+    private function shouldSkipColumn($column): bool
+    {
+        // Skip timestamp fields
+        if (in_array($column->name, ['created_at', 'updated_at', 'deleted_at'])) {
+            return true;
+        }
+
+        // Skip auto-increment fields (MySQL)
+        if (isset($column->extra) && str_contains(strtolower($column->extra), 'auto_increment')) {
+            return true;
+        }
+
+        // Skip fields that are primary keys and likely auto-incremented
+        // This covers cases where we might not have the 'extra' field (SQLite, PostgreSQL)
+        if (isset($column->primary) && $column->primary && 
+            (strtolower($column->name) === 'id' || str_ends_with(strtolower($column->name), '_id'))) {
+            return true;
+        }
+
+        return false;
     }
 
     private function getFakerMethod($column): string

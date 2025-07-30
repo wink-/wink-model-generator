@@ -27,9 +27,9 @@ class GenerateModels extends Command
      */
     protected $signature = 'wink:generate-models 
                           {--connection=sqlite : Database connection to use}
-                          {--directory= : Full path where models should be generated}
-                          {--factory-directory= : Full path where factories should be generated}
-                          {--observer-directory= : Full path where observers should be generated}
+                          {--directory= : Path where models should be generated (absolute or relative to project root)}
+                          {--factory-directory= : Path where factories should be generated (absolute or relative to project root)}
+                          {--observer-directory= : Path where observers should be generated (absolute or relative to project root)}
                           {--with-relationships : Generate relationship methods}
                           {--with-factories : Generate model factories}
                           {--with-observers : Generate model observers}
@@ -79,7 +79,7 @@ class GenerateModels extends Command
             $this->displayStartupInfo($connection, $directory, $factoryDirectory, $observerDirectory);
 
             // Use the provided directory path or create one based on connection name
-            $baseDir = $directory ?: $this->getDefaultDirectory($connection);
+            $baseDir = $directory ? $this->resolveDirectoryPath($directory) : $this->getDefaultDirectory($connection);
             $this->createDirectory($baseDir);
 
             // Get the tables
@@ -96,14 +96,14 @@ class GenerateModels extends Command
 
             if ($this->option('with-factories')) {
                 $this->info('Generating factories...');
-                $factoryBaseDir = $factoryDirectory ?: $this->getDefaultFactoryDirectory($connection);
+                $factoryBaseDir = $factoryDirectory ? $this->resolveDirectoryPath($factoryDirectory) : $this->getDefaultFactoryDirectory($connection);
                 $this->createDirectory($factoryBaseDir);
                 $this->generateFactories($tables, $connection, $factoryBaseDir);
             }
 
             if ($this->option('with-observers')) {
                 $this->info('Generating observers...');
-                $observerBaseDir = $observerDirectory ?: $this->getDefaultObserverDirectory($connection);
+                $observerBaseDir = $observerDirectory ? $this->resolveDirectoryPath($observerDirectory) : $this->getDefaultObserverDirectory($connection);
                 $this->createDirectory($observerBaseDir);
                 $this->generateObservers($tables, $connection, $observerBaseDir);
             }
@@ -149,16 +149,48 @@ class GenerateModels extends Command
         }
 
         // Validate directories are writable
-        if ($directory && ! is_writable(dirname($directory))) {
-            throw new \InvalidArgumentException("Directory '{$directory}' is not writable.");
+        if ($directory) {
+            $absolutePath = $this->resolveDirectoryPath($directory);
+            $this->validateDirectoryIsWritable($absolutePath, $directory, 'models');
         }
 
-        if ($factoryDirectory && ! is_writable(dirname($factoryDirectory))) {
-            throw new \InvalidArgumentException("Factory directory '{$factoryDirectory}' is not writable.");
+        if ($factoryDirectory) {
+            $absolutePath = $this->resolveDirectoryPath($factoryDirectory);
+            $this->validateDirectoryIsWritable($absolutePath, $factoryDirectory, 'factories');
         }
 
-        if ($observerDirectory && ! is_writable(dirname($observerDirectory))) {
-            throw new \InvalidArgumentException("Observer directory '{$observerDirectory}' is not writable.");
+        if ($observerDirectory) {
+            $absolutePath = $this->resolveDirectoryPath($observerDirectory);
+            $this->validateDirectoryIsWritable($absolutePath, $observerDirectory, 'observers');
+        }
+    }
+
+    private function resolveDirectoryPath(string $directory): string
+    {
+        // If it's already an absolute path, return it
+        if (str_starts_with($directory, '/') || (DIRECTORY_SEPARATOR === '\\' && preg_match('/^[A-Z]:/i', $directory))) {
+            return $directory;
+        }
+
+        // Otherwise, resolve it relative to the Laravel base path
+        return base_path($directory);
+    }
+
+    private function validateDirectoryIsWritable(string $absolutePath, string $originalPath, string $type): void
+    {
+        // Find the first existing parent directory
+        $checkPath = $absolutePath;
+        while (!file_exists($checkPath) && $checkPath !== dirname($checkPath)) {
+            $checkPath = dirname($checkPath);
+        }
+
+        if (!is_writable($checkPath)) {
+            throw new \InvalidArgumentException(
+                "Cannot create {$type} directory '{$originalPath}' - parent directory '{$checkPath}' is not writable.\n".
+                "Please use either:\n".
+                "  - Absolute path: --directory=/full/path/to/{$type}\n".
+                "  - Path relative to project root: --directory=app/Models/Your" . ucfirst($type)
+            );
         }
     }
 

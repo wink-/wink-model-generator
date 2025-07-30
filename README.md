@@ -9,7 +9,7 @@ A focused Laravel package that automatically generates Eloquent models and facto
 
 ## Features
 
-- Supports MySQL and SQLite databases (including in-memory SQLite for testing)
+- Supports MySQL, PostgreSQL, and SQLite databases (including in-memory SQLite for testing)
 - Generates complete model files with proper namespacing and **comprehensive Laravel model properties**
 - **Smart property detection**: auto-detects primary keys, key types, incrementing, soft deletes
 - **Enhanced security**: automatically hides sensitive fields (passwords, tokens, etc.)
@@ -20,7 +20,8 @@ A focused Laravel package that automatically generates Eloquent models and facto
 - Generates PHPDoc properties for better IDE support
 - Includes validation rules based on schema
 - Handles custom database connections
-- Optional model factory generation
+- Optional model factory generation with **automatic exclusion of auto-incremented fields**
+- Optional model observer generation
 - Connection-based directory structure for multi-database projects
 - PSR-4 namespace validation and auto-correction
 - Compatible with PHP 8.3+ and Laravel 11+
@@ -138,13 +139,54 @@ Generate Eloquent models from your database schema:
 php artisan wink:generate-models
 
 # Common Options
---connection=sqlite         # Specify database connection (default: sqlite)
---directory=path/to/models  # Custom output directory for models
---with-relationships       # Include relationships
---with-rules              # Generate validation rules
---with-factories          # Generate model factories
---factory-directory=path  # Custom output directory for factories
+--connection=mysql              # Specify database connection (default: sqlite)
+--directory=path/to/models      # Custom output directory for models (absolute or relative to project root)
+--factory-directory=path        # Custom output directory for factories (absolute or relative to project root)
+--observer-directory=path       # Custom output directory for observers (absolute or relative to project root)
+--with-relationships           # Include relationships based on foreign keys
+--with-factories              # Generate model factories
+--with-observers              # Generate model observers
+--with-rules                  # Generate validation rules
+--with-scopes                 # Generate query scopes
+--with-timestamp-scopes       # Generate timestamp-based scopes
+--with-events                 # Generate model event methods
+--with-boot-method           # Generate boot method for event registration
+
+# Examples
+# Generate models with default directory structure
+php artisan wink:generate-models --connection=mysql
+
+# Generate models with custom relative paths (from project root)
+php artisan wink:generate-models --connection=pacsys \
+  --directory=app/Models/GeneratedModels/Pacsys \
+  --factory-directory=database/factories/GeneratedFactories/Pacsys
+
+# Generate models with absolute paths
+php artisan wink:generate-models --connection=pacsys \
+  --directory=/absolute/path/to/models \
+  --factory-directory=/absolute/path/to/factories
+
+# Generate with all features enabled
+php artisan wink:generate-models --connection=mysql \
+  --with-relationships --with-factories --with-observers \
+  --with-rules --with-scopes --with-events
 ```
+
+### Factory Generation
+
+When generating factories with `--with-factories`, the package intelligently creates Laravel factories with:
+
+**Smart Field Exclusion:**
+- **Auto-incremented fields**: Automatically detects and excludes auto-incremented primary keys
+- **Timestamp fields**: Excludes `created_at`, `updated_at`, and `deleted_at` fields
+- **Database-specific detection**: Works across MySQL (via `auto_increment`), PostgreSQL (via sequences/identity), and SQLite (via `INTEGER PRIMARY KEY`)
+
+**Generated Factory Features:**
+- Business-oriented state methods (`active()`, `inactive()`, `pending()`, `archived()`)
+- Test scenario helpers (`forTesting()`, `forDemo()`, `forDevelopment()`)
+- Relationship helpers (`withUser()`, `withBusinessMetadata()`)
+- Business constraint methods for realistic data generation
+- Smart faker method selection based on column names and types
 
 ### Directory Structure
 
@@ -157,6 +199,10 @@ app/
 │   └── GeneratedModels/
 │       ├── mysql/           # Models for MySQL connection
 │       └── sqlite/          # Models for SQLite connection
+├── Observers/
+│   └── GeneratedObservers/
+│       ├── mysql/           # Observers for MySQL connection
+│       └── sqlite/          # Observers for SQLite connection
 └── database/
     └── factories/
         └── GeneratedFactories/
@@ -164,11 +210,21 @@ app/
             └── sqlite/      # Factories for SQLite connection
 ```
 
-The `--directory` command-line option allows you to specify a custom output directory for models, completely overriding the default `{model_path}/GeneratedModels/{connection_name}` structure. Similarly, the `--factory-directory` option overrides the default for factories. These options accept either full paths or paths relative to the project root.
+The `--directory` command-line option allows you to specify a custom output directory for models, completely overriding the default `{model_path}/GeneratedModels/{connection_name}` structure. Similarly, the `--factory-directory` and `--observer-directory` options override the defaults for factories and observers. These options accept either absolute paths or paths relative to the project root.
 
-If the relevant `--directory` or `--factory-directory` options are not specified, the defaults are:
+If the relevant directory options are not specified, the defaults are:
 - Models: `{model_path}/GeneratedModels/{connection_name}` (e.g., `app/Models/GeneratedModels/mysql` using the default `model_path`)
 - Factories: `{factory_path}/GeneratedFactories/{connection_name}` (e.g., `database/factories/GeneratedFactories/mysql` using the default `factory_path`)
+- Observers: `{observer_path}/GeneratedObservers/{connection_name}` (e.g., `app/Observers/GeneratedObservers/mysql` using the default `observer_path`)
+
+## Recent Improvements
+
+### Version 1.1.0
+- **PostgreSQL Support**: Added full support for PostgreSQL databases with auto-increment detection
+- **Improved Directory Handling**: Fixed path resolution for relative and absolute directory options
+- **Enhanced Help Documentation**: Added comprehensive examples and clearer path requirements
+- **Smart Factory Generation**: Factories now automatically exclude auto-incremented fields
+- **Better Error Messages**: More helpful error messages for directory permission issues
 
 ## Contributing
 

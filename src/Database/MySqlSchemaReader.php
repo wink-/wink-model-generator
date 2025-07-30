@@ -69,6 +69,9 @@ class MySqlSchemaReader implements SchemaReader
         foreach ($columns as $column) {
             $column->fulltext = in_array($column->name, $fulltextColumns);
             $column->primary = in_array($column->name, $primaryKeyColumns);
+            // Convert MySQL's notnull to nullable for consistency
+            // MySQL query returns 1 for NOT NULL, 0 for NULL allowed
+            $column->nullable = !$column->notnull;
         }
 
         return $columns;

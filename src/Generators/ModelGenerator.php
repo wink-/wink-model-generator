@@ -95,8 +95,12 @@ class ModelGenerator
             'scopes' => [],
         ];
 
+        // Detect primary keys before processing columns (support compound keys)
+        $primaryKey = $this->detectPrimaryKey($columns);
+        $allPrimaryKeys = $this->detectAllPrimaryKeys($columns);
+
         foreach ($columns as $column) {
-            $this->processColumn($column, $modelData, $timestamps);
+            $this->processColumn($column, $modelData, $timestamps, $allPrimaryKeys);
         }
 
         if ($withRelationships) {
@@ -104,7 +108,7 @@ class ModelGenerator
         }
 
         if ($withRules) {
-            $modelData['rules'] = $this->generateValidationRules($columns);
+            $modelData['rules'] = $this->generateValidationRules($columns, $allPrimaryKeys);
         }
 
         // Detect soft deletes early for event generation
@@ -123,8 +127,7 @@ class ModelGenerator
             $modelData['bootMethod'] = $this->eventsGenerator->generateBootMethod($modelName, $softDeletes);
         }
 
-        // Detect primary key
-        $primaryKey = $this->detectPrimaryKey($columns);
+        // Detect key properties using the already detected primary key
         $keyType = $this->detectKeyType($columns, $primaryKey);
         $incrementing = $this->detectIncrementing($columns, $primaryKey);
 
@@ -172,7 +175,7 @@ class ModelGenerator
         ];
     }
 
-    private function processColumn(object $column, array &$modelData, bool &$timestamps): void
+    private function processColumn(object $column, array &$modelData, bool &$timestamps, array $allPrimaryKeys): void
     {
         if ($this->isTimestampColumn($column->name)) {
             $timestamps = true;
@@ -180,13 +183,14 @@ class ModelGenerator
             return;
         }
 
-        if ($column->name === 'id') {
+        if (in_array($column->name, $allPrimaryKeys)) {
             return;
         }
 
         $modelData['fillable'][] = "'{$column->name}'";
         $phpType = $this->mapDbTypeToPhpDocType($column);
-        $modelData['properties'][] = " * @property {$phpType} \${$column->name}";
+        $nullable = isset($column->nullable) && $column->nullable ? '?' : '';
+        $modelData['properties'][] = " * @property {$nullable}{$phpType} \${$column->name}";
 
         $this->addColumnCasts($column, $modelData['casts']);
     }
@@ -203,7 +207,10 @@ class ModelGenerator
 
         if ($dbType === 'json') {
             $casts[] = "'{$column->name}' => 'array'";
-        } elseif (($dbType === 'tinyint' && $typeExtra === '1') || $dbType === 'boolean' || $dbType === 'bool') {
+        } elseif (($dbType === 'tinyint' && $typeExtra === '1') || 
+                  str_contains($typeExtra, 'tinyint(1)') || 
+                  $dbType === 'boolean' || 
+                  $dbType === 'bool') {
             $casts[] = "'{$column->name}' => 'boolean'";
         } elseif (in_array($dbType, ['datetime', 'timestamp']) || (str_contains($column->name, '_at') && ! str_ends_with($column->name, '_at'))) {
             $casts[] = "'{$column->name}' => 'datetime'";
@@ -243,11 +250,11 @@ EOT;
         }, $foreignKeys);
     }
 
-    private function generateValidationRules(array $columns): array
+    private function generateValidationRules(array $columns, array $allPrimaryKeys): array
     {
         return array_map(function ($column) {
             return $this->generateValidationRule($column);
-        }, array_filter($columns, fn ($col) => $col->name !== 'id'));
+        }, array_filter($columns, fn ($col) => !in_array($col->name, $allPrimaryKeys)));
     }
 
     private function generateValidationRule(object $column): string
@@ -289,7 +296,11 @@ EOT;
         $dbType = strtolower($column->type);
         $typeExtra = isset($column->type_extra) ? strtolower($column->type_extra) : '';
 
-        if (str_contains($typeExtra, 'tinyint(1)')) {
+        // Check if this is a boolean column based on type or name
+        if (str_contains($typeExtra, 'tinyint(1)') || 
+            ($dbType === 'tinyint' && $typeExtra === '1') || 
+            $dbType === 'boolean' || 
+            $dbType === 'bool') {
             return 'bool';
         }
 
@@ -305,9 +316,10 @@ EOT;
             'integer', 'bigint', 'smallint', 'tinyint', 'mediumint' => 'int',
             'boolean', 'bool' => 'bool',
             'real', 'float', 'double', 'decimal', 'numeric' => 'float',
-            'datetime', 'timestamp', 'date' => '\\Illuminate\\Support\\Carbon',
+            'datetime', 'timestamp' => '\\Illuminate\\Support\\Carbon',
+            'date' => '\\Illuminate\\Support\\Carbon',
             'time' => 'string',
-            'json' => 'array|string|object',
+            'json' => 'array',
             'text', 'longtext', 'mediumtext', 'tinytext', 'varchar', 'char', 'enum', 'set', 'string' => 'string',
             'blob', 'longblob', 'mediumblob', 'tinyblob', 'binary', 'varbinary' => 'string',
             default => 'mixed',
@@ -386,6 +398,29 @@ EOT;
         }
 
         return 'id';
+    }
+
+    /**
+     * Get all primary key column names (supports compound primary keys)
+     */
+    private function detectAllPrimaryKeys(array $columns): array
+    {
+        if (! $this->config->getModelProperty('auto_detect_primary_key', true)) {
+            return ['id'];
+        }
+
+        $primaryKeys = [];
+        foreach ($columns as $column) {
+            if (isset($column->primary) && $column->primary) {
+                $primaryKeys[] = $column->name;
+            }
+            // SQLite uses pk field
+            if (isset($column->pk) && $column->pk) {
+                $primaryKeys[] = $column->name;
+            }
+        }
+
+        return empty($primaryKeys) ? ['id'] : $primaryKeys;
     }
 
     private function detectKeyType(array $columns, string $primaryKey): string

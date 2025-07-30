@@ -32,23 +32,43 @@ class PostgreSqlSchemaReader implements SchemaReader
 
         $columns = DB::connection($connection)
             ->select("SELECT 
-                column_name as name,
-                data_type as type,
-                CASE WHEN is_nullable = 'NO' THEN 1 ELSE 0 END as notnull,
-                column_default as \"default\",
-                character_maximum_length as length,
-                numeric_precision as \"precision\",
-                numeric_scale as \"scale\",
-                udt_name as type_extra
-            FROM information_schema.columns 
-            WHERE table_schema = ? 
-            AND table_name = ?
-            ORDER BY ordinal_position",
+                c.column_name as name,
+                c.data_type as type,
+                CASE WHEN c.is_nullable = 'NO' THEN 1 ELSE 0 END as notnull,
+                c.column_default as \"default\",
+                c.character_maximum_length as length,
+                c.numeric_precision as \"precision\",
+                c.numeric_scale as \"scale\",
+                c.udt_name as type_extra,
+                CASE 
+                    WHEN c.column_default LIKE 'nextval%' THEN 'auto_increment'
+                    WHEN c.is_identity = 'YES' THEN 'auto_increment'
+                    ELSE ''
+                END as extra,
+                CASE 
+                    WHEN tc.constraint_type = 'PRIMARY KEY' THEN true
+                    ELSE false
+                END as primary
+            FROM information_schema.columns c
+            LEFT JOIN information_schema.key_column_usage kcu
+                ON c.table_schema = kcu.table_schema
+                AND c.table_name = kcu.table_name
+                AND c.column_name = kcu.column_name
+            LEFT JOIN information_schema.table_constraints tc
+                ON kcu.constraint_name = tc.constraint_name
+                AND kcu.table_schema = tc.table_schema
+                AND tc.constraint_type = 'PRIMARY KEY'
+            WHERE c.table_schema = ? 
+            AND c.table_name = ?
+            ORDER BY c.ordinal_position",
                 [$schema, $tableName]);
 
         // Add fulltext information (PostgreSQL uses GIN/GiST indexes for full-text search)
         foreach ($columns as $column) {
             $column->fulltext = false; // PostgreSQL doesn't have MySQL-style FULLTEXT indexes
+            // Convert PostgreSQL's notnull to nullable for consistency
+            // PostgreSQL query returns 1 for NOT NULL, 0 for NULL allowed
+            $column->nullable = !$column->notnull;
         }
 
         return $columns;
