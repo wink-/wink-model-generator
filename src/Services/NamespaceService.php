@@ -16,6 +16,32 @@ class NamespaceService
         $this->fileService = $fileService;
     }
 
+    /**
+     * Get the base namespace for a given type from config.
+     */
+    public function getBaseNamespace(string $type): string
+    {
+        return match ($type) {
+            'models' => config('model-generator.model_namespace', 'App\\Models').'\\GeneratedModels',
+            'factories' => config('model-generator.factory_namespace', 'Database\\Factories').'\\GeneratedFactories',
+            'observers' => config('model-generator.observer_namespace', 'App\\Observers').'\\GeneratedObservers',
+            default => 'App',
+        };
+    }
+
+    /**
+     * Get the base path for a given type from config.
+     */
+    public function getBasePath(string $type): string
+    {
+        return match ($type) {
+            'models' => config('model-generator.model_path', app_path('Models')).'/GeneratedModels',
+            'factories' => config('model-generator.factory_path', database_path('factories')).'/GeneratedFactories',
+            'observers' => config('model-generator.observer_path', app_path('Observers')).'/GeneratedObservers',
+            default => app_path(),
+        };
+    }
+
     public function getCurrentNamespace(string $filePath): ?string
     {
         $content = $this->fileService->get($filePath);
