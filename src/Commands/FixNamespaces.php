@@ -213,8 +213,11 @@ class FixNamespaces extends Command
         $filePath = str_replace('\\', '/', $filePath);
         $rootPath = rtrim(str_replace('\\', '/', $rootPath), '/');
 
-        // Get relative path from root
-        $relativePath = str_replace($rootPath.'/', '', $filePath);
+        // Get relative path from root - ensure we're properly handling the path
+        $relativePath = $filePath;
+        if (str_starts_with($filePath, $rootPath.'/')) {
+            $relativePath = substr($filePath, strlen($rootPath) + 1);
+        }
         $relativeDir = dirname($relativePath);
 
         // Determine base namespace based on type
@@ -271,19 +274,31 @@ class FixNamespaces extends Command
         if (str_starts_with($normalizedRoot, $basePath.'/app/')) {
             $relativePath = str_replace($basePath.'/app/', '', $normalizedRoot);
 
-            return 'App'.($relativePath ? '\\'.str_replace('/', '\\', $relativePath) : '');
+            return 'App'.($relativePath ? '\\'.$this->pathToNamespace($relativePath) : '');
         }
 
         if (str_starts_with($normalizedRoot, $basePath.'/database/factories/')) {
             $relativePath = str_replace($basePath.'/database/factories/', '', $normalizedRoot);
 
-            return 'Database\\Factories'.($relativePath ? '\\'.str_replace('/', '\\', $relativePath) : '');
+            return 'Database\\Factories'.($relativePath ? '\\'.$this->pathToNamespace($relativePath) : '');
         }
 
         // Fall back to computing from path relative to base
         $relativePath = str_replace($basePath.'/', '', $normalizedRoot);
 
-        return str_replace('/', '\\', ucfirst($relativePath));
+        return $this->pathToNamespace($relativePath);
+    }
+
+    /**
+     * Convert a path to a properly cased namespace segment.
+     */
+    private function pathToNamespace(string $path): string
+    {
+        $segments = explode('/', $path);
+        $segments = array_map(fn ($s) => ucfirst($s), $segments);
+        $segments = array_filter($segments, fn ($s) => $s !== '');
+
+        return implode('\\', $segments);
     }
 
     private function ensureConnectionSegment(string $namespace, string $connectionSegment, string $type): string
