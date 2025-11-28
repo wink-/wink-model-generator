@@ -75,7 +75,7 @@ class SqliteSchemaReader implements SchemaReader
 
         // Get the table's SQL definition to check for AUTOINCREMENT
         $tableSql = DB::connection($connection)
-            ->select('SELECT sql FROM sqlite_master WHERE type=? AND name=?', ['table', $tableName]);
+            ->select('SELECT sql FROM sqlite_master WHERE type=? AND name=?', ['table', $safeTableName]);
 
         $isAutoIncrement = false;
         if (! empty($tableSql) && $tableSql[0]->sql) {
@@ -107,7 +107,7 @@ class SqliteSchemaReader implements SchemaReader
             // Extract this for consistency with MySQL which has separate type_extra
             if (preg_match('/^(\w+)(\(.+\))$/', $column->type, $matches)) {
                 $column->type = $matches[1];
-                $column->type_extra = $column->type.$matches[2]; // Store full type like 'tinyint(1)'
+                $column->type_extra = $column->type . $matches[2]; // Store full type like 'tinyint(1)'
             } else {
                 $column->type_extra = '';
             }
