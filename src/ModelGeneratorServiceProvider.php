@@ -6,6 +6,7 @@ namespace Wink\ModelGenerator;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Wink\ModelGenerator\Commands\FixNamespaces;
 use Wink\ModelGenerator\Commands\GenerateModels;
 use Wink\ModelGenerator\Commands\ValidateModelNamespaces;
 use Wink\ModelGenerator\Config\GeneratorConfig;
@@ -16,6 +17,7 @@ use Wink\ModelGenerator\Database\SqliteSchemaReader;
 use Wink\ModelGenerator\Generators\ObserverGenerator;
 use Wink\ModelGenerator\Services\FileService;
 use Wink\ModelGenerator\Services\ModelService;
+use Wink\ModelGenerator\Services\NamespaceService;
 
 class ModelGeneratorServiceProvider extends PackageServiceProvider
 {
@@ -27,6 +29,7 @@ class ModelGeneratorServiceProvider extends PackageServiceProvider
             ->hasCommands([
                 GenerateModels::class,
                 ValidateModelNamespaces::class,
+                FixNamespaces::class,
             ]);
     }
 
@@ -59,6 +62,11 @@ class ModelGeneratorServiceProvider extends PackageServiceProvider
         // Register ModelService
         $this->app->singleton(ModelService::class, function ($app) {
             return new ModelService;
+        });
+
+        // Register NamespaceService
+        $this->app->singleton(NamespaceService::class, function ($app) {
+            return new NamespaceService($app->make(FileService::class));
         });
 
         // Register ObserverGenerator

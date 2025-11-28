@@ -128,7 +128,7 @@ The package now automatically generates comprehensive Laravel model properties b
 
 ## Usage
 
-The package provides two main commands for generating models and factories.
+The package provides commands for generating models, factories, and fixing namespaces.
 
 ### Model Generation
 
@@ -216,6 +216,45 @@ If the relevant directory options are not specified, the defaults are:
 - Models: `{model_path}/GeneratedModels/{connection_name}` (e.g., `app/Models/GeneratedModels/mysql` using the default `model_path`)
 - Factories: `{factory_path}/GeneratedFactories/{connection_name}` (e.g., `database/factories/GeneratedFactories/mysql` using the default `factory_path`)
 - Observers: `{observer_path}/GeneratedObservers/{connection_name}` (e.g., `app/Observers/GeneratedObservers/mysql` using the default `observer_path`)
+
+### Namespace Fixing
+
+If you've moved or copied generated files to different directories, use the `wink:fix-namespaces` command to automatically correct namespace declarations to match PSR-4 and the package's configured base namespaces:
+
+```bash
+# Basic usage - fix namespaces in the default models directory
+php artisan wink:fix-namespaces
+
+# Options
+path                           # Root directory to scan (defaults based on type)
+--type=models|factories|observers|any  # Type of files to fix (default: models)
+--connection=                  # Connection name to include under Generated* segments
+--dry-run                      # Only print intended changes, do not write
+--verbose                      # Show detailed per-file logs
+
+# Examples
+# Fix namespaces for models in a specific directory
+php artisan wink:fix-namespaces app/Models/MyCustomFolder
+
+# Fix factory namespaces
+php artisan wink:fix-namespaces --type=factories
+
+# Preview changes without modifying files
+php artisan wink:fix-namespaces app/Models/MovedModels --dry-run
+
+# Fix namespaces and add connection segment for a specific database connection
+php artisan wink:fix-namespaces app/Models/GeneratedModels --connection=mysql
+
+# Fix all PHP files under app/ with verbose output
+php artisan wink:fix-namespaces app/ --type=any --verbose
+```
+
+**How it works:**
+- Scans all PHP files under the specified root path
+- Computes the expected namespace based on the file's location and configured base namespaces
+- If `--connection` is specified, ensures the connection segment is present after GeneratedModels/GeneratedFactories/GeneratedObservers
+- Compares current namespace declarations to expected namespaces and updates mismatches
+- Files without namespace declarations get one inserted after `<?php` and `declare(strict_types=1);` if present
 
 ## Recent Improvements
 
