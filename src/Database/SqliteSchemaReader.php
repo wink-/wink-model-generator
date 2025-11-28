@@ -9,7 +9,12 @@ use RuntimeException;
 
 class SqliteSchemaReader implements SchemaReader
 {
-    public function getTables(string $connection, array $excludedTables): array
+    /**
+     * Validate connection and prepare for read-only operations.
+     *
+     * @throws RuntimeException
+     */
+    private function validateAndPrepareConnection(string $connection): void
     {
         $config = config("database.connections.{$connection}");
 
@@ -22,8 +27,30 @@ class SqliteSchemaReader implements SchemaReader
             throw new RuntimeException("Database file at path [{$database}] does not exist. Ensure this is an absolute path to the database.");
         }
 
-        // Only set read-only mode if database exists
+        // Set read-only mode for this connection
         DB::connection($connection)->statement('PRAGMA query_only = 1');
+    }
+
+    /**
+     * Sanitize table name to prevent SQL injection in PRAGMA statements.
+     * SQLite table names must be valid identifiers.
+     *
+     * @throws RuntimeException
+     */
+    private function sanitizeTableName(string $tableName): string
+    {
+        // SQLite identifiers can contain alphanumeric characters, underscores
+        // They cannot start with a digit and cannot contain special characters
+        if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $tableName)) {
+            throw new RuntimeException("Invalid table name: {$tableName}");
+        }
+
+        return $tableName;
+    }
+
+    public function getTables(string $connection, array $excludedTables): array
+    {
+        $this->validateAndPrepareConnection($connection);
 
         $tables = DB::connection($connection)
             ->select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
@@ -40,33 +67,22 @@ class SqliteSchemaReader implements SchemaReader
 
     public function getTableColumns(string $connection, string $tableName): array
     {
-        $config = config("database.connections.{$connection}");
-
-        if (! isset($config['database'])) {
-            throw new RuntimeException("No database path configured for connection: {$connection}");
-        }
-
-        $database = $config['database'];
-        if ($database !== ':memory:' && ! file_exists($database)) {
-            throw new RuntimeException("Database file at path [{$database}] does not exist. Ensure this is an absolute path to the database.");
-        }
-
-        // Only set read-only mode if database exists
-        DB::connection($connection)->statement('PRAGMA query_only = 1');
+        $this->validateAndPrepareConnection($connection);
+        $safeTableName = $this->sanitizeTableName($tableName);
 
         $columns = DB::connection($connection)
-            ->select("PRAGMA table_info({$tableName})");
-        
+            ->select("PRAGMA table_info({$safeTableName})");
+
         // Get the table's SQL definition to check for AUTOINCREMENT
         $tableSql = DB::connection($connection)
-            ->select("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", [$tableName]);
-        
+            ->select('SELECT sql FROM sqlite_master WHERE type=? AND name=?', ['table', $tableName]);
+
         $isAutoIncrement = false;
-        if (!empty($tableSql) && $tableSql[0]->sql) {
+        if (! empty($tableSql) && $tableSql[0]->sql) {
             // Check if table has AUTOINCREMENT keyword
             $isAutoIncrement = stripos($tableSql[0]->sql, 'AUTOINCREMENT') !== false;
         }
-        
+
         // Ensure pk field is properly converted to boolean and add primary alias
         // Also convert SQLite's notnull to nullable for consistency
         foreach ($columns as $column) {
@@ -74,49 +90,38 @@ class SqliteSchemaReader implements SchemaReader
             $column->primary = $column->pk;
             // SQLite uses 'notnull' where 1 = NOT NULL, 0 = NULL allowed
             // Convert to 'nullable' for consistency with other database drivers
-            $column->nullable = !$column->notnull;
-            
+            $column->nullable = ! $column->notnull;
+
             // Add extra field for auto-increment detection
             // In SQLite, INTEGER PRIMARY KEY columns are auto-incremented by default
             if ($column->primary && strtoupper($column->type) === 'INTEGER') {
                 $column->extra = 'auto_increment';
-            } else if ($isAutoIncrement && $column->primary) {
+            } elseif ($isAutoIncrement && $column->primary) {
                 // If AUTOINCREMENT keyword is explicitly used
                 $column->extra = 'auto_increment';
             } else {
                 $column->extra = '';
             }
-            
+
             // For SQLite, the type field may contain additional info like tinyint(1)
             // Extract this for consistency with MySQL which has separate type_extra
             if (preg_match('/^(\w+)(\(.+\))$/', $column->type, $matches)) {
                 $column->type = $matches[1];
-                $column->type_extra = $column->type . $matches[2]; // Store full type like 'tinyint(1)'
+                $column->type_extra = $column->type.$matches[2]; // Store full type like 'tinyint(1)'
             } else {
                 $column->type_extra = '';
             }
         }
-        
+
         return $columns;
     }
 
     public function getForeignKeys(string $connection, string $tableName): array
     {
-        $config = config("database.connections.{$connection}");
-
-        if (! isset($config['database'])) {
-            throw new RuntimeException("No database path configured for connection: {$connection}");
-        }
-
-        $database = $config['database'];
-        if ($database !== ':memory:' && ! file_exists($database)) {
-            throw new RuntimeException("Database file at path [{$database}] does not exist. Ensure this is an absolute path to the database.");
-        }
-
-        // Only set read-only mode if database exists
-        DB::connection($connection)->statement('PRAGMA query_only = 1');
+        $this->validateAndPrepareConnection($connection);
+        $safeTableName = $this->sanitizeTableName($tableName);
 
         return DB::connection($connection)
-            ->select("SELECT * FROM pragma_foreign_key_list('{$tableName}')");
+            ->select("SELECT * FROM pragma_foreign_key_list({$safeTableName})");
     }
 }

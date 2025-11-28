@@ -12,21 +12,23 @@ class MySqlSchemaReader implements SchemaReader
     public function getTables(string $connection, array $excludedTables): array
     {
         $schema = Config::get("database.connections.{$connection}.database");
-        $excludedTablesString = ! empty($excludedTables) ?
-            "AND table_name NOT IN ('".implode("','", $excludedTables)."')" :
-            '';
 
         // Set read-only mode for this connection
         DB::connection($connection)->statement('SET SESSION TRANSACTION READ ONLY');
 
-        return DB::connection($connection)
-            ->select("SELECT TABLE_NAME as name 
-                     FROM information_schema.tables 
-                     WHERE table_schema = ? 
-                     AND table_type = 'BASE TABLE'
-                     AND table_name NOT LIKE 'pma%'
-                     {$excludedTablesString}",
-                [$schema]);
+        // Build query with parameterized excluded tables to prevent SQL injection
+        $query = DB::connection($connection)
+            ->table('information_schema.tables')
+            ->select('TABLE_NAME as name')
+            ->where('table_schema', $schema)
+            ->where('table_type', 'BASE TABLE')
+            ->where('table_name', 'NOT LIKE', 'pma%');
+
+        if (! empty($excludedTables)) {
+            $query->whereNotIn('table_name', $excludedTables);
+        }
+
+        return $query->get()->toArray();
     }
 
     public function getTableColumns(string $connection, string $tableName): array
