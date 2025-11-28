@@ -35,6 +35,9 @@ class SqliteSchemaReader implements SchemaReader
      * Sanitize table name to prevent SQL injection in PRAGMA statements.
      * SQLite table names must be valid identifiers.
      *
+     * Note: SQLite PRAGMA commands cannot use parameter binding, so we validate
+     * table names to ensure they only contain safe identifier characters.
+     *
      * @throws RuntimeException
      */
     private function sanitizeTableName(string $tableName): string
@@ -70,6 +73,8 @@ class SqliteSchemaReader implements SchemaReader
         $this->validateAndPrepareConnection($connection);
         $safeTableName = $this->sanitizeTableName($tableName);
 
+        // PRAGMA commands cannot use parameter binding in SQLite,
+        // so we use sanitized table name to prevent SQL injection
         $columns = DB::connection($connection)
             ->select("PRAGMA table_info({$safeTableName})");
 
@@ -79,8 +84,8 @@ class SqliteSchemaReader implements SchemaReader
 
         $isAutoIncrement = false;
         if (! empty($tableSql) && $tableSql[0]->sql) {
-            // Check if table has AUTOINCREMENT keyword
-            $isAutoIncrement = stripos($tableSql[0]->sql, 'AUTOINCREMENT') !== false;
+            // Check if table has AUTOINCREMENT keyword (case-insensitive)
+            $isAutoIncrement = str_contains(strtolower($tableSql[0]->sql), 'autoincrement');
         }
 
         // Ensure pk field is properly converted to boolean and add primary alias
@@ -121,6 +126,8 @@ class SqliteSchemaReader implements SchemaReader
         $this->validateAndPrepareConnection($connection);
         $safeTableName = $this->sanitizeTableName($tableName);
 
+        // PRAGMA functions cannot use parameter binding in SQLite,
+        // so we use sanitized table name to prevent SQL injection
         return DB::connection($connection)
             ->select("SELECT * FROM pragma_foreign_key_list({$safeTableName})");
     }
