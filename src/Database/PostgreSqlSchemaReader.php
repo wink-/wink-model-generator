@@ -12,18 +12,19 @@ class PostgreSqlSchemaReader implements SchemaReader
     public function getTables(string $connection, array $excludedTables): array
     {
         $schema = Config::get("database.connections.{$connection}.schema", 'public');
-        $excludedTablesString = ! empty($excludedTables) ?
-            "AND table_name NOT IN ('".implode("','", $excludedTables)."')" :
-            '';
 
-        return DB::connection($connection)
-            ->select("SELECT table_name as name 
-                     FROM information_schema.tables 
-                     WHERE table_schema = ? 
-                     AND table_type = 'BASE TABLE'
-                     {$excludedTablesString}
-                     ORDER BY table_name",
-                [$schema]);
+        // Build query with parameterized excluded tables to prevent SQL injection
+        $query = DB::connection($connection)
+            ->table('information_schema.tables')
+            ->select('table_name as name')
+            ->where('table_schema', $schema)
+            ->where('table_type', 'BASE TABLE');
+
+        if (! empty($excludedTables)) {
+            $query->whereNotIn('table_name', $excludedTables);
+        }
+
+        return $query->orderBy('table_name')->get()->toArray();
     }
 
     public function getTableColumns(string $connection, string $tableName): array

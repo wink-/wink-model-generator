@@ -80,7 +80,7 @@ class ModelGenerator
         $namespace = 'App\\Models';
 
         // If modelName includes a path, extract the namespace and class name
-        if (strpos($modelName, '/') !== false || strpos($modelName, '\\') !== false) {
+        if (str_contains($modelName, '/') || str_contains($modelName, '\\')) {
             $parts = preg_split('/[\/\\\\]/', $modelName);
             $modelName = array_pop($parts);
             $namespace = 'App\\Models\\'.implode('\\', $parts);
@@ -231,13 +231,13 @@ class ModelGenerator
             $relatedModel = $tableName;
 
             // If the table name contains a path separator, extract the model name
-            if (strpos($tableName, '/') !== false || strpos($tableName, '\\') !== false) {
+            if (str_contains($tableName, '/') || str_contains($tableName, '\\')) {
                 $parts = preg_split('/[\/\\\\]/', $tableName);
                 $relatedModel = end($parts);
             }
 
             $modelName = Str::studly(Str::singular($relatedModel));
-            $namespace = isset($foreignKey->namespace) ? $foreignKey->namespace : '';
+            $namespace = $foreignKey->namespace ?? '';
 
             $fullModelClass = $namespace ? "\\App\\Models\\{$namespace}\\{$modelName}" : "\\App\\Models\\{$modelName}";
 
@@ -449,7 +449,7 @@ EOT;
                     return false;
                 }
                 // Check if column has auto_increment
-                if (isset($column->extra) && strpos(strtolower($column->extra), 'auto_increment') !== false) {
+                if (isset($column->extra) && str_contains(strtolower($column->extra), 'auto_increment')) {
                     return true;
                 }
 
@@ -471,7 +471,7 @@ EOT;
 
         foreach ($columns as $column) {
             foreach ($patterns as $pattern) {
-                if (strpos(strtolower($column->name), $pattern) !== false) {
+                if (str_contains(strtolower($column->name), $pattern)) {
                     $hidden[] = "'{$column->name}'";
                     break;
                 }
@@ -494,7 +494,7 @@ EOT;
         foreach ($columns as $column) {
             $isHidden = false;
             foreach ($patterns as $pattern) {
-                if (strpos(strtolower($column->name), $pattern) !== false) {
+                if (str_contains(strtolower($column->name), $pattern)) {
                     $isHidden = true;
                     break;
                 }
